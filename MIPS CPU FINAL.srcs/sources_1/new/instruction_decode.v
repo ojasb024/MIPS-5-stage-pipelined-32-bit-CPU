@@ -5,7 +5,8 @@ module  instruction_decode(
     output  [5:0] opcode,
     output  [4:0] rs, rt, rd,
     output  [5:0] func, 
-    output  [15:0] imm
+    output  [15:0] imm,
+    output  [25:0] target_address
     );
     
     assign opcode = instruction[31:26];
@@ -14,5 +15,6 @@ module  instruction_decode(
     assign rd = instruction[15:11];
     assign funct = instruction[5:0];
     assign imm = instruction[15:0];
+    assign target_address = instruction[25:0];
  
 endmodule

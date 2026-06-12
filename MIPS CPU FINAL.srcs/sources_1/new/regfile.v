@@ -8,7 +8,7 @@ module  regfile(
     );
     
     // 32 x 32 bit registers
-    reg [31:0] registers [31:0]; 
+    reg [31:0] registers [0:31]; 
     
     assign  read_data1 = (read_reg1 == 0) ? 0 : registers[read_reg1];
     assign  read_data2 = (read_reg2 == 0) ? 0 : registers[read_reg2];
@@ -17,4 +17,5 @@ module  regfile(
         if (write_enable && write_reg != 0) 
             registers[write_reg] <= write_data;        
     end
+
 endmodule

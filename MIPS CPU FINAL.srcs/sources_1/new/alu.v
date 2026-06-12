@@ -1,9 +1,10 @@
 `timescale 1ns / 1ps
 
-module alu(
+module ALU(
     input   [31:0] A, B,
-    input   [5:0] control,
-    output  reg [31:0] result
+    input   [3:0] control,
+    output  reg [31:0] result,
+    output  zero
     );
     
     always@(*) begin
@@ -19,9 +20,13 @@ module alu(
             4'd10: result = $signed(A) >>> B[4:0];
             4'd11: result = ($signed(A) < $signed(B)) ? 1 : 0;
             4'd12: result = (A < B) ? 1 : 0;
-            4'd13: result = B;
+            4'd13: result = A;
+            4'd14: result = B;
+            4'd15: result = B << 16;
             default: result = 0;
         endcase  
     end
     
+    assign zero = (result == 0);
+
 endmodule
