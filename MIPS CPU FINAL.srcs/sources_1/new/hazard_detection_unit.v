@@ -11,7 +11,7 @@ module  hazard_detection_unit(
 
     always@(*) begin
         if ((IDEX_rt == IFID_rs || IDEX_rt == IFID_rt) 
-            && IDEX_mem_read && IDEX_RT != 0)
+            && IDEX_mem_read && IDEX_rt != 0)
             begin
                 PC_enable = 0;
                 IFID_enable = 0;
