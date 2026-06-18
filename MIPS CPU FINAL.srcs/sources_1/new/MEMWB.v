@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module  MEMWB(
-    input   clk;
+    input   clk,
 
     input   [4:0] EXMEM_dst_reg,
     input   [31:0] EXMEM_ALU_result,
@@ -15,7 +15,7 @@ module  MEMWB(
     output  reg [31:0] MEMWB_link_address,
     output  reg [31:0] MEMWB_load_data,
     output  reg [1:0] MEMWB_wb_src,
-    output  reg MEMWB_reg_write,
+    output  reg MEMWB_reg_write
     );
     
     always@(posedge clk) begin

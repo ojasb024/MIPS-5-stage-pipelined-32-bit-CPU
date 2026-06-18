@@ -1,11 +1,13 @@
 `timescale 1ns / 1ps
 
 module  IFID(
-    input   clk;
-    input   en;
-    input   flush;
+    input   clk,
+    input   en,
+    input   flush,
+    
     input   [31:0] instruction,
     input   [31:0] PC,
+
     output  reg [31:0] IFID_instruction,
     output  reg [31:0] IFID_PC
     );

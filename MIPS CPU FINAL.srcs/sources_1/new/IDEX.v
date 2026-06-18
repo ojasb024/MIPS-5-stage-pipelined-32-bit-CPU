@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
 
 module  IDEX(
-    input   clk;
-    input   flush;
+    input   clk,
+    input   flush,
     
     input   [25:0] IFID_target_address,
     input   [4:0] IFID_rs, IFID_rt, IFID_dst_reg,
@@ -48,24 +48,24 @@ module  IDEX(
             end
         else  
             begin
-                IDEX_target_address <= IFID_target_address,
-                IDEX_rs <= IFID_rs, 
-                IDEX_rt <= IFID_rt, 
-                IDEX_dst_reg <= IFID_dst_reg,
-                IDEX_reg1 <= IFID_reg1, 
-                IDEX_reg2 <= IFID_reg2,
-                IDEX_imm <= IFID_imm,
-                IDEX_ALU_src <= IFID_ALU_src,
-                IDEX_func <= IFID_func,
-                IDEX_branch <= IFID_branch,
-                IDEX_jump <= IFID_jump,
-                IDEX_mem_read <= IFID_mem_read,
-                IDEX_mem_write <= IFID_mem_write,
-                IDEX_data_size <= IFID_data_size,
-                IDEX_data_sign<= IFID_data_sign,
-                IDEX_wb_src <= IFID_wb_src,
-                IDEX_reg_write <= IFID_reg_write, 
-                IDEX_PC <= IFID_PC,
+                IDEX_target_address <= IFID_target_address;
+                IDEX_rs <= IFID_rs;
+                IDEX_rt <= IFID_rt; 
+                IDEX_dst_reg <= IFID_dst_reg;
+                IDEX_reg1 <= IFID_reg1;
+                IDEX_reg2 <= IFID_reg2;
+                IDEX_imm <= IFID_imm;
+                IDEX_ALU_src <= IFID_ALU_src;
+                IDEX_func <= IFID_func;
+                IDEX_branch <= IFID_branch;
+                IDEX_jump <= IFID_jump;
+                IDEX_mem_read <= IFID_mem_read;
+                IDEX_mem_write <= IFID_mem_write;
+                IDEX_data_size <= IFID_data_size;
+                IDEX_data_sign<= IFID_data_sign;
+                IDEX_wb_src <= IFID_wb_src;
+                IDEX_reg_write <= IFID_reg_write; 
+                IDEX_PC <= IFID_PC;
             end
     end
      

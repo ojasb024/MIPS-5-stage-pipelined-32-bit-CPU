@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module  EXMEM(
-    input   clk;
+    input   clk,
     
     input [4:0] IDEX_dst_reg,
     input [31:0] IDEX_ALU_result,
@@ -21,7 +21,7 @@ module  EXMEM(
     input reg EXMEM_data_sign,
     input reg [1:0] EXMEM_wb_src,
     input reg EXMEM_reg_write, 
-    input reg [31:0] EXMEM_PC,  
+    input reg [31:0] EXMEM_PC  
     );
     
     always@(posedge clk) begin
