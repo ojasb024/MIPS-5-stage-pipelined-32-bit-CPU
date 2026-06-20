@@ -3,8 +3,7 @@
 module ALU(
     input   [31:0] A, B,
     input   [3:0] control,
-    output  reg [31:0] result,
-    output  zero
+    output  reg [31:0] result
     );
     
     always@(*) begin
@@ -26,7 +25,5 @@ module ALU(
             default: result = 0;
         endcase  
     end
-    
-    assign zero = (result == 0);
 
 endmodule

@@ -11,6 +11,11 @@ module  IFID(
     output  reg [31:0] IFID_instruction,
     output  reg [31:0] IFID_PC
     );
+
+    initial begin
+        IFID_instruction = 32'd0;
+        IFID_PC = 32'd0;
+    end
     
     always@(posedge clk) begin
         if (en)

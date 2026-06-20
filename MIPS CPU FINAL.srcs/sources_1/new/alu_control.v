@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
 
 module  ALU_control(
-    input   [3:0] ALU_op,
     input   [5:0] func,
+    input   [3:0] ALU_op,
     output  reg [3:0] ALU_cont
     );    
     
@@ -15,7 +15,9 @@ module  ALU_control(
                 begin
                     case(func)
                         6'b100001: ALU_cont = 4'd1;
+                        6'b100000: ALU_cont = 4'd1;             
                         6'b100011: ALU_cont = 4'd3;
+                        6'b100010: ALU_cont = 4'd3;
                 
                         6'b100100: ALU_cont = 4'd4;
                         6'b100101: ALU_cont = 4'd5;
@@ -31,6 +33,7 @@ module  ALU_control(
 
                         6'b001000: ALU_cont = 4'd14;
                         6'b001001: ALU_cont = 4'd14;
+                        default: ALU_cont = 4'd14;
                     endcase
                 end
             4'b0011: ALU_cont = 4'd12;
@@ -39,6 +42,7 @@ module  ALU_control(
             4'b0110: ALU_cont = 4'd5;
             4'b0111: ALU_cont = 4'd6;
             4'b1000: ALU_cont = 4'd15;
+            default: ALU_cont = 4'd14;
         endcase
     end
    

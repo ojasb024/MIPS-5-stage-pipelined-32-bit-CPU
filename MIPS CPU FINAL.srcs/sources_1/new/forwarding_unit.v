@@ -2,7 +2,7 @@
 
 module  forwarding_unit(
     input   [4:0] IDEX_rs, IDEX_rt,
-    input   [4:0] EXMEM_destreg, MEMWB_destreg,
+    input   [4:0] EXMEM_dst_reg, MEMWB_dst_reg,
     input   EXMEM_rw, MEMWB_rw,
     input   [31:0] EXMEM_result, MEMWB_result,
     output  reg [31:0] forward_A, forward_B,
@@ -15,27 +15,27 @@ module  forwarding_unit(
         A_src = 0;
         B_src = 0;
 
-        if ((EXMEM_destreg == IDEX_rs)
-        && EXMEM_rw && (EXMEM_destreg != 0))                 
+        if ((EXMEM_dst_reg == IDEX_rs)
+        && EXMEM_rw && (EXMEM_dst_reg != 0))                 
             begin
                 forward_A = EXMEM_result;
                 A_src = 1;
             end
-        else if ((MEMWB_destreg == IDEX_rs)
-        && MEMWB_rw && (MEMWB_destreg != 0))                
+        else if ((MEMWB_dst_reg == IDEX_rs)
+        && MEMWB_rw && (EXMEM_dst_reg != 0))                
             begin
                 forward_A = MEMWB_result;
                 A_src = 1;
             end
 
-        if ((EXMEM_destreg == IDEX_rt)
-        && EXMEM_rw && (EXMEM_destreg != 0))                 
+        if ((EXMEM_dst_reg == IDEX_rt)
+        && EXMEM_rw && (EXMEM_dst_reg != 0))                 
             begin
                 forward_B = EXMEM_result;
                 B_src = 1;
             end
-        else if ((MEMWB_destreg == IDEX_rt)
-        && MEMWB_rw && (MEMWB_destreg != 0))                
+        else if ((MEMWB_dst_reg == IDEX_rt)
+        && MEMWB_rw && (MEMWB_dst_reg != 0))                
             begin
                 forward_B = MEMWB_result;
                 B_src = 1;

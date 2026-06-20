@@ -7,54 +7,64 @@ module cpu_top(
     /**************************************** WIRES *****************************************/
 
     // FETCH 
-    wire [31:0] PC, next_PC, PC_plus4;
+    wire [31:0] PC, PC_next, PC_plus4;
     wire [31:0] instruction;
 
-    // IF/ID
+    // DECODE
     wire [31:0] IFID_instruction;
-    wire [5:0] IFID_opcode = IFID_instruction[31:26];
-    wire [4:0] IFID_rs = IFID_instruction[25:21];
-    wire [4:0] IFID_rt = IFID_instruction[20:16];
-    wire [4:0] IFID_rd = IFID_instruction[15:11];
-    wire [5:0] IFID_funct = IFID_instruction[5:0];
+    wire [5:0] opcode = IFID_instruction[31:26];
+    wire [4:0] rs = IFID_instruction[25:21];
+    wire [4:0] rt = IFID_instruction[20:16];
+    wire [4:0] rd = IFID_instruction[15:11];
+    wire [5:0] funct = IFID_instruction[5:0];
     wire [25:0] target_address = IFID_instruction[25:0];
-    wire [15:0] IFID_imm = IFID_instruction[15:0];
-    wire [31:0] IFID_imm_se;
-    wire [4:0] IFID_dst_reg;
-    wire [1:0] IFID_dst_reg_src;
-    wire [4:0] IFID_ALU_op;
-    wire [3:0] IFID_branch;
-    wire [1:0] IFID_jump;
-    wire IFID_mem_read;
-    wire IFID_mem_write;
-    wire [1:0] IFID_data_size;
-    wire IFID_data_sign;
-    wire [1:0] IFID_wb_src;
-    wire IFID_reg_write;
-    wire [31:0] IFID_PC;
-    wire [31:0] IFID_reg1, IFID_reg2;
+    wire [15:0] imm = IFID_instruction[15:0];
+    wire [31:0] imm_se;
+    wire ALU_src;
+    wire [4:0] dst_reg;
+    wire [1:0] dst_reg_src;
+    wire [31:0] read_reg1, read_reg2;
+    wire [3:0] ALU_op;
+    wire [3:0] branch;
+    wire [1:0] jump;
+    wire mem_read;
+    wire mem_write;
+    wire [1:0] data_size;
+    wire data_sign;
+    wire [1:0] wb_src;
+    wire reg_write;
+    wire [31:0] IFID_PC_plus4;
 
-    // ID/EX
+    // EXECUTE
     wire [4:0] IDEX_rt, IDEX_rs, IDEX_dst_reg;
-    wire [31:0] IDEX_reg1, IDEX_reg2;
+    wire [31:0] IDEX_read_reg1, IDEX_read_reg2;
     wire [31:0] A, B;
+    wire [31:0] B_operand;
     wire [31:0] IDEX_imm;
     wire IDEX_ALU_src;
-    wire IDEX_func;
-    wire IDEX_ALU_op;
+    wire [5:0] IDEX_funct;
+    wire [3:0] IDEX_ALU_op;
     wire [3:0] ALU_cont;
-    wire [31:0] IDEX_ALU_result;
-    wire [31:0] IDEX_branch_address;
-    wire [31:0] IDEX_target_address;
+    wire [31:0] ALU_result;
+    wire [31:0] branch_address;
+    wire [25:0] IDEX_target_address;
     wire [3:0] IDEX_branch;
     wire [1:0] IDEX_jump;
     wire [1:0] PC_src;
+    wire [31:0] IDEX_PC_plus4;
+    wire IDEX_mem_read;
+    wire IDEX_mem_write;
+    wire [1:0] IDEX_data_size;
+    wire IDEX_data_sign;
+    wire [1:0] IDEX_wb_src;
+    wire IDEX_reg_write;
 
-    // EX/MEM
+    // MEMORY ACCESS
     wire [4:0] EXMEM_dst_reg;
+    wire [31:0] EXMEM_read_reg2;
     wire [31:0] EXMEM_ALU_result;
-    wire [31:0] EXMEM_load_data;
-    wire [31:0] EXMEM_link_address;
+    wire [31:0] EXMEM_PC_plus4;
+    wire [31:0] load_data;
     wire EXMEM_mem_read;
     wire EXMEM_mem_write;
     wire [1:0] EXMEM_data_size;
@@ -62,13 +72,14 @@ module cpu_top(
     wire [1:0] EXMEM_wb_src;
     wire EXMEM_reg_write;
 
-    // MEM/WB
+    // WRITE BACK
     wire [4:0] MEMWB_dst_reg;
     wire [31:0] MEMWB_ALU_result;
-    wire [31:0] MEMWB_link_address;
+    wire [31:0] MEMWB_PC_plus4;
     wire [31:0] MEMWB_load_data;
     wire [1:0] MEMWB_wb_src;
     wire MEMWB_reg_write;
+    wire [31:0] write_back_data;
 
     // External Modules
 
@@ -83,48 +94,75 @@ module cpu_top(
 
     // Forwarding module  
     wire A_src, B_src;
-    wire [31:0] forward_A, forward_A;
+    wire [31:0] forward_A, forward_B;
 
     /******************************** MODULE INSTANTIATIONS *********************************/
 
     // FETCH 
-    PC_mux g0(PC_src, PC_plus4, IDEX_target_address, IDEX_ALU_result, IDEX_branch_address);
-    PC g1(clk, PC_en, PC_next, PC);
-    adder_32bit g2(PC, 4, PC_plus4);
-    instruction_memory g3(PC, instruction);
+    PC_mux m0(PC_src, PC_plus4, IDEX_target_address, ALU_result, branch_address, PC_next);
+    adder_32b a0(PC, 32'd4, PC_plus4);
+    PC g0(clk, PC_en, PC_next, PC);
+    instruction_memory g1(PC, instruction);
 
     // IF/ID
-    IFID p0(clk, IFID_en, IFID_flush, instruction, PC, IFID_instruction, IFID_PC);
+    IFID p0(clk, IFID_en, IFID_flush, instruction, PC_plus4, IFID_instruction, IFID_PC_plus4);
 
     // DECODE  
-    control_unit g4(IFID_opcode, IFID_func, IFID_rt, IFID_reg_write, IFID_dst_reg_src, 
-        IFID_mem_read, IFID_mem_write, IFID_wb_src, IFID_data_size, IFID_data_sign, 
-        IFID_branch, IFID_jump, IFID_ALU_src, IFID_ALU_op);
+    control_unit g2(opcode, funct, rt, reg_write, dst_reg_src, mem_read, mem_write, wb_src, 
+        data_size, data_sign, branch, jump, ALU_src, ALU_op);
+    regfile g3(clk, MEMWB_reg_write, MEMWB_dst_reg, rs, rt, write_back_data, read_reg1, 
+        read_reg2);
+    sign_extend g4(imm, imm_se);
+    dst_reg_mux m1(dst_reg_src, 31, rd, rt, dst_reg);
 
     // ID/EX
-    IDEX p1(clk, IDEX_flush, IFID_target_address, IFID_rs, IFID_rt, IFID_dst_reg,
-        IFID_reg1, IFID_reg2, IFID_imm_se, IFID_ALU_src, IFID_func, IFID_branch, IFID_jump,
-        IFID_mem_read, IFID_mem_write, IFID_data_size, IFID_data_sign, IFID_wb_src,   
-        IFID_reg_write, IFID_PC, IDEX_target_address, IDEX_rs, IDEX_rt, IDEX_dst_reg,  
-        IDEX_reg1, IDEX_reg2, IDEX_imm, IDEX_ALU_src, IDEX_func, IDEX_branch, IDEX_jump,
-        IDEX_mem_read, IDEX_mem_write, IDEX_data_size, IDEX_data_sign, IDEX_wb_src,  
-        IDEX_reg_write, IDEX_PC);
+    IDEX p1(clk, IDEX_flush, hazard_IDEX_flush, target_address, rs, rt, dst_reg, read_reg1, read_reg2, imm_se, 
+        ALU_src, funct, ALU_op, branch, jump, mem_read, mem_write, data_size, data_sign, wb_src, 
+        reg_write, IFID_PC_plus4, IDEX_target_address, IDEX_rs, IDEX_rt, IDEX_dst_reg, 
+        IDEX_read_reg1, IDEX_read_reg2, IDEX_imm, IDEX_ALU_src, IDEX_funct, IDEX_ALU_op, IDEX_branch, 
+        IDEX_jump, IDEX_mem_read, IDEX_mem_write, IDEX_data_size, IDEX_data_sign, IDEX_wb_src,  
+        IDEX_reg_write, IDEX_PC_plus4);
 
     // EXECUTE
+    mux_2to1_32b m2(IDEX_ALU_src, IDEX_read_reg2, IDEX_imm, B_operand);
+    mux_2to1_32b m3(A_src, IDEX_read_reg1, forward_A, A);
+    mux_2to1_32b m4(B_src, B_operand, forward_B, B);
+    ALU_control g5(IDEX_funct, IDEX_ALU_op, ALU_cont);
+    ALU g6(A, B, ALU_cont, ALU_result);
+    adder_32b a1((IDEX_imm << 2), IDEX_PC_plus4, branch_address);
+    pc_control g7(IDEX_branch, IDEX_jump, ALU_result, PC_src);
 
     // EX/MEM
+    EXMEM p2(clk, IDEX_dst_reg, IDEX_read_reg2, ALU_result, IDEX_mem_read, IDEX_mem_write, 
+        IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, IDEX_PC_plus4, 
+        EXMEM_dst_reg, EXMEM_read_reg2, EXMEM_ALU_result, EXMEM_mem_read, EXMEM_mem_write, 
+        EXMEM_data_size, EXMEM_data_sign, EXMEM_wb_src, EXMEM_reg_write, EXMEM_PC_plus4);
 
     // MEMORY ACCESS
+    data_memory g8(clk, EXMEM_mem_read, EXMEM_mem_write, EXMEM_data_size, EXMEM_data_sign, 
+        EXMEM_ALU_result, EXMEM_read_reg2, load_data);
 
     // MEM/WB
+    MEMWB p3(clk, EXMEM_dst_reg, EXMEM_ALU_result, EXMEM_PC_plus4, load_data, 
+        EXMEM_wb_src, EXMEM_reg_write, MEMWB_dst_reg, MEMWB_ALU_result, MEMWB_PC_plus4, 
+        MEMWB_load_data, MEMWB_wb_src, MEMWB_reg_write);
 
     // WRITE BACK
+    mux_3to1_32b m5(MEMWB_wb_src, MEMWB_ALU_result, MEMWB_PC_plus4, MEMWB_load_data, 
+        write_back_data);
+
+    // External modules 
     
-    
-    
-    
-    
-    
-    
-    
+    // Flush control
+    flush_control g9(PC_src, hazard_IDEX_flush, IFID_flush, IDEX_flush);
+
+    // Forwarding unit
+    forwarding_unit g10(IDEX_rs, IDEX_rt, EXMEM_dst_reg, MEMWB_dst_reg, EXMEM_reg_write, 
+        MEMWB_reg_write, EXMEM_ALU_result, MEMWB_ALU_result, forward_A, forward_B,
+        A_src, B_src);
+
+    // Hazard detection unit
+    hazard_detection_unit g11(rs, rt, IDEX_mem_read, IDEX_rt, PC_en, IFID_en, 
+        hazard_IDEX_flush);
+
 endmodule

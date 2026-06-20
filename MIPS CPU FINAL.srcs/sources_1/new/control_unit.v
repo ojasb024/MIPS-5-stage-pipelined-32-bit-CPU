@@ -9,8 +9,8 @@ module  control_unit(
     output  reg mem_read,                                      
     output  reg mem_write,                                     
     output  reg [1:0] wb_src,
-    output  reg [1:0] data_size;
-    output  reg data_sign;                                     
+    output  reg [1:0] data_size,
+    output  reg data_sign,                                     
     output  reg [3:0] branch,   
     output  reg [1:0] jump,                                     
     output  reg ALU_src,                                       
@@ -25,7 +25,7 @@ module  control_unit(
 
     always@(*) begin
         reg_write = 0;
-        reg_dst_src = 2'b10;
+        dst_reg_src = 2'b10;
         mem_read  = 0;
         mem_write = 0;
         wb_src = 0;
@@ -42,7 +42,7 @@ module  control_unit(
                 begin
                     reg_write = 1;                                                                    
                     ALU_op = 4'b0010; 
-                    reg_dst_src = 2'b01;
+                    dst_reg_src = 2'b01;
                     case(func)
                         // jr
                         6'b001000:
@@ -55,10 +55,11 @@ module  control_unit(
                             begin
                                 jump = 2'b11;
                                 reg_write = 1; 
-                                reg_dst_src = 0;
+                                dst_reg_src = 0;
                             end
                         // NOP
                         6'b000000: reg_write = 0;
+                        default: ;
                     endcase
                 end
             // Arithmetic immediate  
@@ -214,7 +215,7 @@ module  control_unit(
                                 branch = 4'b0111; 
                                 wb_src = 2'b01;    
                                 reg_write = 1; 
-                                reg_dst_src = 0;
+                                dst_reg_src = 0;
                             end                                     
                         // bgezal
                         5'b10001: 
@@ -222,7 +223,21 @@ module  control_unit(
                                 branch = 4'b1000;
                                 wb_src = 2'b01;  
                                 reg_write = 1; 
-                                reg_dst_src = 0;                                    
+                                dst_reg_src = 0;                                    
+                            end
+                        default:
+                            begin
+                                reg_write = 0;
+                                dst_reg_src = 2'b10;
+                                mem_read  = 0;
+                                mem_write = 0;
+                                wb_src = 0;
+                                data_size = 0;
+                                data_sign = 0;
+                                branch = 0;
+                                jump = 0;
+                                ALU_src = 0;
+                                ALU_op = 0;
                             end
                     endcase                                       
                 end
@@ -234,8 +249,22 @@ module  control_unit(
                     jump = 2'b10; 
                     wb_src = 2'b01;
                     reg_write = 1;
-                    reg_dst_src = 0;
-                end   
+                    dst_reg_src = 0;
+                end  
+            default: 
+                begin
+                    reg_write = 0;
+                    dst_reg_src = 2'b10;
+                    mem_read  = 0;
+                    mem_write = 0;
+                    wb_src = 0;
+                    data_size = 0;
+                    data_sign = 0;
+                    branch = 0;
+                    jump = 0;
+                    ALU_src = 0;
+                    ALU_op = 0;
+                end 
         endcase 
     end
     

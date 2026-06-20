@@ -6,7 +6,7 @@ module  hazard_detection_unit(
     input   [4:0] IDEX_rt,
     output  reg PC_enable,
     output  reg IFID_enable,
-    output  reg IDEX_flush 
+    output  reg hazard_IDEX_flush
     );
 
     always@(*) begin
@@ -15,13 +15,13 @@ module  hazard_detection_unit(
             begin
                 PC_enable = 0;
                 IFID_enable = 0;
-                IDEX_flush = 1;
+                hazard_IDEX_flush = 1;
             end
         else
             begin
                 PC_enable = 1;
                 IFID_enable = 1;
-                IDEX_flush = 0;
+                hazard_IDEX_flush = 0;
             end 
     end
 

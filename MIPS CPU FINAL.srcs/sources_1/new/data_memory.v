@@ -15,7 +15,7 @@ module  data_memory(
     reg [7:0] data_mem [0:mem_size];
 
     always@(*) begin
-        read_data = 32'b0;
+        read_data = 32'd0;
 
         if (mem_read)
             begin
@@ -26,7 +26,7 @@ module  data_memory(
                                 read_data = {{24{data_mem[address][7]}}, 
                                 data_mem[address]};
                             else
-                                read_data = {24'b0, 
+                                read_data = {24'd0, 
                                 data_mem[address]};
                         end
                     2'b10:
@@ -36,7 +36,7 @@ module  data_memory(
                                 data_mem[address + 1],
                                 data_mem[address]};
                             else
-                                read_data = {16'b0, 
+                                read_data = {16'd0, 
                                 data_mem[address + 1],
                                 data_mem[address]};
                         end
@@ -44,7 +44,9 @@ module  data_memory(
                         read_data = {data_mem[address + 3],
                         data_mem[address + 2],
                         data_mem[address + 1],
-                        data_mem[address]};
+                        data_mem[address]};    
+                    default: 
+                        read_data = 32'd0;
                 endcase
             end
     end
