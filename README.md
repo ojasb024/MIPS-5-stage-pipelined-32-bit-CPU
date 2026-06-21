@@ -2,9 +2,7 @@ The CPU I am designing is a 32-bit, 5-stage pipelined MIPS processor. It is curr
 
 <img width="1231" height="809" alt="Screenshot 2026-06-21 023004" src="https://github.com/user-attachments/assets/bb96cd4c-0e70-4a0e-a484-1c5c198813e4" />
 
-This is the datapath diagram I created for the CPU. It shows all major modules, the pipeline registers (IF/ID, ID/EX, EX/MEM, and MEM/WB), the connections between them, and the five pipeline stages: Fetch, Decode, Execute, Memory Access, and Write Back.
-
-I chose to implement pipelining because it significantly improves processor throughput. By dividing instruction execution into multiple stages, the CPU can have up to five instructions in progress simultaneously, allowing more efficient use of hardware resources.
+This is the datapath diagram I created for the CPU. It shows all major modules, the pipeline registers (IF/ID, ID/EX, EX/MEM, and MEM/WB), the connections between them, and the five pipeline stages: Fetch, Decode, Execute, Memory Access, and Write Back. I chose to implement pipelining because it significantly improves processor throughput. By dividing instruction execution into multiple stages, the CPU can have up to five instructions in progress simultaneously, allowing more efficient use of hardware resources.
 
 The program below was loaded into instruction memory and used for testing:
 
