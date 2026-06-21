@@ -6,8 +6,6 @@ This is the datapath diagram I created for the CPU. It shows all major modules, 
 
 I chose to implement pipelining because it significantly improves processor throughput. By dividing instruction execution into multiple stages, the CPU can have up to five instructions in progress simultaneously, allowing more efficient use of hardware resources.
 
-<img width="1616" height="359" alt="Screenshot 2026-06-21 024627" src="https://github.com/user-attachments/assets/1df8aaa5-81d3-4f74-84d3-4ac9b2312c62" />
-
 The program below was loaded into instruction memory and used for testing:
 
 ```text
@@ -15,6 +13,7 @@ The program below was loaded into instruction memory and used for testing:
 21090005    // addi $9,  $8, 5
 212A0007    // addi $10, $9, 7
 ```
+<img width="1616" height="359" alt="Screenshot 2026-06-21 024627" src="https://github.com/user-attachments/assets/1df8aaa5-81d3-4f74-84d3-4ac9b2312c62" />
 
 In the Vivado simulation waveform, pipelining can be observed through the propagation of the reg_write control signal across the pipeline registers (IDEX_reg_write, EXMEM_reg_write, and MEMWB_reg_write). The destination register signals (dst_reg, IDEX_dst_reg, EXMEM_dst_reg, and MEMWB_dst_reg) can also be seen progressing through the pipeline in the same way.
 
