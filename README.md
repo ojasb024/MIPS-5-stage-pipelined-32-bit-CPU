@@ -10,9 +10,11 @@ I chose to implement pipelining because it significantly improves processor thro
 
 The program below was loaded into instruction memory and used for testing:
 
+```text
 2008000A    // addi $8,  $0, 10
 21090005    // addi $9,  $8, 5
 212A0007    // addi $10, $9, 7
+```
 
 In the Vivado simulation waveform, pipelining can be observed through the propagation of the reg_write control signal across the pipeline registers (IDEX_reg_write, EXMEM_reg_write, and MEMWB_reg_write). The destination register signals (dst_reg, IDEX_dst_reg, EXMEM_dst_reg, and MEMWB_dst_reg) can also be seen progressing through the pipeline in the same way.
 
