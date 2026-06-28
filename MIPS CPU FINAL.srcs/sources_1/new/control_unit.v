@@ -57,8 +57,6 @@ module  control_unit(
                                 reg_write = 1; 
                                 dst_reg_src = 0;
                             end
-                        // NOP
-                        6'b000000: reg_write = 0;
                         default: ;
                     endcase
                 end

@@ -95,6 +95,9 @@ module cpu_top(
     // Forwarding module  
     wire A_src, B_src;
     wire [31:0] forward_A, forward_B;
+    
+    // Modifications 
+    wire [31:0] read_reg1_rf, read_reg2_rf;
 
     /******************************** MODULE INSTANTIATIONS *********************************/
 
@@ -110,10 +113,19 @@ module cpu_top(
     // DECODE  
     control_unit g2(opcode, funct, rt, reg_write, dst_reg_src, mem_read, mem_write, wb_src, 
         data_size, data_sign, branch, jump, ALU_src, ALU_op);
-    regfile g3(clk, MEMWB_reg_write, MEMWB_dst_reg, rs, rt, write_back_data, read_reg1, 
-        read_reg2);
+    regfile g3(clk, MEMWB_reg_write, MEMWB_dst_reg, rs, rt, write_back_data, read_reg1_rf, 
+        read_reg2_rf);
     sign_extend g4(imm, imm_se);
     dst_reg_mux m1(dst_reg_src, 31, rd, rt, dst_reg);
+
+    // Modifications
+    assign read_reg1 =
+    (MEMWB_reg_write && (MEMWB_dst_reg == rs) && (MEMWB_dst_reg != 0))
+        ? write_back_data : read_reg1_rf;
+        
+    assign read_reg2 =
+    (MEMWB_reg_write && (MEMWB_dst_reg == rt) && (MEMWB_dst_reg != 0))
+        ? write_back_data : read_reg2_rf;
 
     // ID/EX
     IDEX p1(clk, IDEX_flush, hazard_IDEX_flush, target_address, rs, rt, dst_reg, read_reg1, read_reg2, imm_se, 

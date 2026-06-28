@@ -22,7 +22,7 @@ module  forwarding_unit(
                 A_src = 1;
             end
         else if ((MEMWB_dst_reg == IDEX_rs)
-        && MEMWB_rw && (EXMEM_dst_reg != 0))                
+        && MEMWB_rw && (MEMWB_dst_reg != 0))                
             begin
                 forward_A = MEMWB_result;
                 A_src = 1;

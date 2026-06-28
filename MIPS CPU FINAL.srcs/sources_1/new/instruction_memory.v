@@ -10,9 +10,6 @@ module instruction_memory(
 
     initial begin
         $readmemh("PROGRAM.mem", instruction_mem);
-        $display("IMEM[0] = %h", instruction_mem[0]);
-        $display("IMEM[4] = %h", instruction_mem[4]);
-        $display("IMEM[8] = %h", instruction_mem[8]);
     end
 
     assign instruction = instruction_mem[PC[9:2]];
