@@ -13,7 +13,7 @@ module  control_unit(
     output  reg data_sign,                                     
     output  reg [3:0] branch,   
     output  reg [1:0] jump,                                     
-    output  reg ALU_src,                                       
+    output  reg [1:0] ALU_src,                                       
     output  reg [3:0] ALU_op 
     );
 
@@ -21,7 +21,7 @@ module  control_unit(
     // mem_read -> 1: Read from mem, 0: No read
     // mem_write -> 1: Write to mem, 0: No write
     // mem_to_reg -> 1: Select mem data, 0: Select ALU data
-    // ALU_src -> 1: input imm into ALU_B, 0: input register value
+    // ALU_src -> 2: input shamt into ALU_B, 1: input imm into ALU_B, 0: input register value
 
     always@(*) begin
         reg_write = 0;
@@ -54,8 +54,12 @@ module  control_unit(
                         6'b001001:
                             begin
                                 jump = 2'b11;
-                                reg_write = 1; 
                                 dst_reg_src = 0;
+                            end
+                        6'b000000, 6'b000010, 
+                        6'b000011:
+                            begin
+                                ALU_src = 2'b10;
                             end
                         default: ;
                     endcase
@@ -65,26 +69,26 @@ module  control_unit(
             6'b001000: 
                 begin
                     reg_write = 1;                                                                   
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                 end
             // addiu
             6'b001001: 
                 begin
                     reg_write = 1;                                                                         
-                    ALU_src = 1;                                          
+                    ALU_src = 2'b01;                                          
                 end
             // slti
             6'b001010: 
                 begin
                     reg_write = 1;                                                                         
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                     ALU_op = 4'b0011;  
             end
             // sltiu
             6'b001011: 
                 begin
                     reg_write = 1;                                                                          
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                     ALU_op = 4'b0100;   
                 end
             // Logical immediate
@@ -92,28 +96,28 @@ module  control_unit(
             6'b001100: 
                 begin
                     reg_write = 1;                                                                       
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                     ALU_op = 4'b0101;   
                 end
             // ori
             6'b001101: 
                 begin
                     reg_write = 1;                                                                          
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                     ALU_op = 4'b0110;   
                 end
             // xori
             6'b001110: 
                 begin
                     reg_write = 1;                                                                        
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                     ALU_op = 4'b0111;   
                 end
             // lui
             6'b001111: 
                 begin
                     reg_write = 1;                                                                          
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                     ALU_op = 4'b1000;   
                 end
             // Loads 
@@ -124,7 +128,7 @@ module  control_unit(
                     mem_read = 1;                                                                      
                     data_size = 2'b01;
                     data_sign = 1;                                                                        
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                 end
             // lh
             6'b100001: 
@@ -133,7 +137,7 @@ module  control_unit(
                     mem_read = 1;                                                                       
                     data_size = 2'b10;
                     data_sign = 1;                                                                        
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                 end
             // lw
             6'b100011: 
@@ -142,7 +146,7 @@ module  control_unit(
                     mem_read = 1;                                                                         
                     data_size = 2'b11;
                     data_sign = 1;                                                                          
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                 end
             // lbu 
             6'b100100: 
@@ -150,7 +154,7 @@ module  control_unit(
                     reg_write = 1;                                     
                     mem_read = 1;                                                                           
                     data_size = 2'b01;                                                                     
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                 end
             // lhu
             6'b100101: 
@@ -158,7 +162,7 @@ module  control_unit(
                     reg_write = 1;                                     
                     mem_read = 1;                                                                          
                     data_size = 2'b10;                                                                          
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
             end
             // Stores 
             // sb 
@@ -166,21 +170,21 @@ module  control_unit(
                 begin                                      
                     mem_write = 1;
                     data_size = 2'b01;                                                                          
-                    ALU_src = 1;                                        
+                    ALU_src = 2'b01;                                        
             end
             // sh 
             6'b101001: 
                 begin                                       
                     mem_write = 1;
                     data_size = 2'b10;                                                                                                             
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                 end
             // sw 
             6'b101011: 
                 begin                                                                   
                     mem_write = 1; 
                     data_size = 2'b11;                                                                                                             
-                    ALU_src = 1;                                       
+                    ALU_src = 2'b01;                                       
                 end
             // Branches
             // beq
@@ -223,20 +227,7 @@ module  control_unit(
                                 reg_write = 1; 
                                 dst_reg_src = 0;                                    
                             end
-                        default:
-                            begin
-                                reg_write = 0;
-                                dst_reg_src = 2'b10;
-                                mem_read  = 0;
-                                mem_write = 0;
-                                wb_src = 0;
-                                data_size = 0;
-                                data_sign = 0;
-                                branch = 0;
-                                jump = 0;
-                                ALU_src = 0;
-                                ALU_op = 0;
-                            end
+                        default: ;
                     endcase                                       
                 end
             // j 
@@ -249,20 +240,7 @@ module  control_unit(
                     reg_write = 1;
                     dst_reg_src = 0;
                 end  
-            default: 
-                begin
-                    reg_write = 0;
-                    dst_reg_src = 2'b10;
-                    mem_read  = 0;
-                    mem_write = 0;
-                    wb_src = 0;
-                    data_size = 0;
-                    data_sign = 0;
-                    branch = 0;
-                    jump = 0;
-                    ALU_src = 0;
-                    ALU_op = 0;
-                end 
+            default: ;
         endcase 
     end
     

@@ -19,8 +19,9 @@ module cpu_top(
     wire [5:0] funct = IFID_instruction[5:0];
     wire [25:0] target_address = IFID_instruction[25:0];
     wire [15:0] imm = IFID_instruction[15:0];
+    wire [4:0] shamt = IFID_instruction[10:6];
     wire [31:0] imm_se;
-    wire ALU_src;
+    wire [1:0] ALU_src;
     wire [4:0] dst_reg;
     wire [1:0] dst_reg_src;
     wire [31:0] read_reg1, read_reg2;
@@ -41,7 +42,8 @@ module cpu_top(
     wire [31:0] A, B;
     wire [31:0] B_operand;
     wire [31:0] IDEX_imm;
-    wire IDEX_ALU_src;
+    wire [4:0] IDEX_shamt;
+    wire [1:0] IDEX_ALU_src;
     wire [5:0] IDEX_funct;
     wire [3:0] IDEX_ALU_op;
     wire [3:0] ALU_cont;
@@ -128,19 +130,24 @@ module cpu_top(
         ? write_back_data : read_reg2_rf;
 
     // ID/EX
-    IDEX p1(clk, IDEX_flush, hazard_IDEX_flush, target_address, rs, rt, dst_reg, read_reg1, read_reg2, imm_se, 
-        ALU_src, funct, ALU_op, branch, jump, mem_read, mem_write, data_size, data_sign, wb_src, 
-        reg_write, IFID_PC_plus4, IDEX_target_address, IDEX_rs, IDEX_rt, IDEX_dst_reg, 
-        IDEX_read_reg1, IDEX_read_reg2, IDEX_imm, IDEX_ALU_src, IDEX_funct, IDEX_ALU_op, IDEX_branch, 
-        IDEX_jump, IDEX_mem_read, IDEX_mem_write, IDEX_data_size, IDEX_data_sign, IDEX_wb_src,  
-        IDEX_reg_write, IDEX_PC_plus4);
+    IDEX p1(clk, IDEX_flush, hazard_IDEX_flush, target_address, rs, rt, dst_reg, read_reg1, 
+        read_reg2, imm_se, shamt, ALU_src, funct, ALU_op, branch, jump, mem_read, mem_write, 
+        data_size, data_sign, wb_src, reg_write, IFID_PC_plus4, IDEX_target_address, IDEX_rs, 
+        IDEX_rt, IDEX_dst_reg, IDEX_read_reg1, IDEX_read_reg2, IDEX_imm, IDEX_shamt, IDEX_ALU_src, 
+        IDEX_funct, IDEX_ALU_op, IDEX_branch, IDEX_jump, IDEX_mem_read, IDEX_mem_write, 
+        IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, IDEX_PC_plus4);
 
     // EXECUTE
+    wire [31:0] A_operand;
+    mux_2to1_A_operand m_mod(IDEX_ALU_src, IDEX_read_reg1, IDEX_shamt, A_operand);    
     mux_2to1_32b m2(IDEX_ALU_src, IDEX_read_reg2, IDEX_imm, B_operand);
-    mux_2to1_32b m3(A_src, IDEX_read_reg1, forward_A, A);
+    
+    mux_2to1_32b m3(A_src, A_operand, forward_A, A);
     mux_2to1_32b m4(B_src, B_operand, forward_B, B);
+    
     ALU_control g5(IDEX_funct, IDEX_ALU_op, ALU_cont);
     ALU g6(A, B, ALU_cont, ALU_result);
+    
     adder_32b a1((IDEX_imm << 2), IDEX_PC_plus4, branch_address);
     pc_control g7(IDEX_branch, IDEX_jump, ALU_result, PC_src);
 

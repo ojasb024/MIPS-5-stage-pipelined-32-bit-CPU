@@ -9,7 +9,8 @@ module  IDEX(
     input   [4:0] rs, rt, dst_reg,
     input   [31:0] read_reg1, read_reg2,
     input   [31:0] imm_se,
-    input   ALU_src,
+    input   [4:0] shamt, 
+    input   [1:0] ALU_src,
     input   [5:0] funct,
     input   [3:0] ALU_op,
     input   [3:0] branch,
@@ -26,7 +27,8 @@ module  IDEX(
     output  reg [4:0] IDEX_rs, IDEX_rt, IDEX_dst_reg,
     output  reg [31:0] IDEX_read_reg1, IDEX_read_reg2,
     output  reg [31:0] IDEX_imm,
-    output  reg IDEX_ALU_src,
+    output  reg [4:0] IDEX_shamt,
+    output  reg [1:0] IDEX_ALU_src,
     output  reg [5:0] IDEX_funct,
     output  reg [3:0] IDEX_ALU_op,
     output  reg [3:0] IDEX_branch,
@@ -48,6 +50,7 @@ module  IDEX(
         IDEX_read_reg1 = 0;
         IDEX_read_reg2 = 0;
         IDEX_imm = 0;
+        IDEX_shamt = 0;
         IDEX_ALU_src = 0;
         IDEX_funct = 0;
         IDEX_ALU_op = 0;
@@ -80,6 +83,7 @@ module  IDEX(
                 IDEX_read_reg1 <= read_reg1;
                 IDEX_read_reg2 <= read_reg2;
                 IDEX_imm <= imm_se;
+                IDEX_shamt <= shamt;
                 IDEX_ALU_src <= ALU_src;
                 IDEX_funct <= funct;
                 IDEX_ALU_op <= ALU_op;
