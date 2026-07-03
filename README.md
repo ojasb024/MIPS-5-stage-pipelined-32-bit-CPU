@@ -27,9 +27,6 @@ The program below was loaded into instruction memory and used for testing:
 
 01098021    // addu $16, $8, $9        -> $16 = 30
 01288823    // subu $17, $9, $8        -> $17 = 10
-
-21080005    // addi $8,  $8, 5         -> $8  = 15
-2129FFFD    // addi $9,  $9, -3        -> $9  = 17
 ```
 
 <img width="1616" height="381" alt="Screenshot 2026-07-04 023212" src="https://github.com/user-attachments/assets/ed635002-1a2a-4e16-bee6-39440a85a99f" />
