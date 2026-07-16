@@ -17,12 +17,6 @@ module  control_unit(
     output  reg [3:0] ALU_op 
     );
 
-    // reg_write -> 1: Overwrite reg, 0: No write
-    // mem_read -> 1: Read from mem, 0: No read
-    // mem_write -> 1: Write to mem, 0: No write
-    // mem_to_reg -> 1: Select mem data, 0: Select ALU data
-    // ALU_src -> 2: input shamt into ALU_B, 1: input imm into ALU_B, 0: input register value
-
     always@(*) begin
         reg_write = 0;
         dst_reg_src = 2'b10;
@@ -128,7 +122,8 @@ module  control_unit(
                     mem_read = 1;                                                                      
                     data_size = 2'b01;
                     data_sign = 1;                                                                        
-                    ALU_src = 2'b01;                                       
+                    ALU_src = 2'b01;
+                    wb_src = 2'b10;                                        
                 end
             // lh
             6'b100001: 
@@ -137,7 +132,8 @@ module  control_unit(
                     mem_read = 1;                                                                       
                     data_size = 2'b10;
                     data_sign = 1;                                                                        
-                    ALU_src = 2'b01;                                       
+                    ALU_src = 2'b01;
+                    wb_src = 2'b10;                                        
                 end
             // lw
             6'b100011: 
@@ -146,7 +142,8 @@ module  control_unit(
                     mem_read = 1;                                                                         
                     data_size = 2'b11;
                     data_sign = 1;                                                                          
-                    ALU_src = 2'b01;                                       
+                    ALU_src = 2'b01;
+                    wb_src = 2'b10;                                        
                 end
             // lbu 
             6'b100100: 
@@ -154,7 +151,8 @@ module  control_unit(
                     reg_write = 1;                                     
                     mem_read = 1;                                                                           
                     data_size = 2'b01;                                                                     
-                    ALU_src = 2'b01;                                       
+                    ALU_src = 2'b01;
+                    wb_src = 2'b10;                                        
                 end
             // lhu
             6'b100101: 
@@ -162,21 +160,22 @@ module  control_unit(
                     reg_write = 1;                                     
                     mem_read = 1;                                                                          
                     data_size = 2'b10;                                                                          
-                    ALU_src = 2'b01;                                       
+                    ALU_src = 2'b01;
+                    wb_src = 2'b10;                                        
             end
             // Stores 
             // sb 
             6'b101000: 
                 begin                                      
                     mem_write = 1;
-                    data_size = 2'b01;                                                                          
+                    data_size = 2'b01;                                                                         
                     ALU_src = 2'b01;                                        
             end
             // sh 
             6'b101001: 
                 begin                                       
                     mem_write = 1;
-                    data_size = 2'b10;                                                                                                             
+                    data_size = 2'b10;                                                                                                                   
                     ALU_src = 2'b01;                                       
                 end
             // sw 

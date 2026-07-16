@@ -40,6 +40,7 @@ module cpu_top(
     wire [4:0] IDEX_rt, IDEX_rs, IDEX_dst_reg;
     wire [31:0] IDEX_read_reg1, IDEX_read_reg2;
     wire [31:0] A, B;
+    wire [31:0] A_operand;
     wire [31:0] B_operand;
     wire [31:0] IDEX_imm;
     wire [4:0] IDEX_shamt;
@@ -138,12 +139,11 @@ module cpu_top(
         IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, IDEX_PC_plus4);
 
     // EXECUTE
-    wire [31:0] A_operand;
-    mux_2to1_A_operand m_mod(IDEX_ALU_src, IDEX_read_reg1, IDEX_shamt, A_operand);    
-    mux_2to1_32b m2(IDEX_ALU_src, IDEX_read_reg2, IDEX_imm, B_operand);
+    mux_2to1_A_operand m_A(IDEX_ALU_src, IDEX_read_reg1, IDEX_shamt, A_operand);    
+    mux_2to1_32b m_B(IDEX_ALU_src, IDEX_read_reg2, IDEX_imm, B_operand);
     
-    mux_2to1_32b m3(A_src, A_operand, forward_A, A);
-    mux_2to1_32b m4(B_src, B_operand, forward_B, B);
+    mux_2to1_32b m_fA(A_src, A_operand, forward_A, A);
+    mux_2to1_32b m_fB(B_src, B_operand, forward_B, B);
     
     ALU_control g5(IDEX_funct, IDEX_ALU_op, ALU_cont);
     ALU g6(A, B, ALU_cont, ALU_result);
@@ -177,7 +177,7 @@ module cpu_top(
 
     // Forwarding unit
     forwarding_unit g10(IDEX_rs, IDEX_rt, EXMEM_dst_reg, MEMWB_dst_reg, EXMEM_reg_write, 
-        MEMWB_reg_write, EXMEM_ALU_result, MEMWB_ALU_result, forward_A, forward_B,
+        MEMWB_reg_write, EXMEM_ALU_result, write_back_data, forward_A, forward_B,
         A_src, B_src);
 
     // Hazard detection unit
