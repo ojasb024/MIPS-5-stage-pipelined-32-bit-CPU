@@ -4,7 +4,7 @@ module  EXMEM(
     input   clk,
     
     input [4:0] IDEX_dst_reg,
-    input [31:0] IDEX_read_reg2,
+    input [31:0] store_data,
     input [31:0] ALU_result,
     input IDEX_mem_read,
     input IDEX_mem_write, 
@@ -15,7 +15,7 @@ module  EXMEM(
     input [31:0] IDEX_PC_plus4,
 
     output reg [4:0] EXMEM_dst_reg,
-    output reg [31:0] EXMEM_read_reg2,
+    output reg [31:0] EXMEM_store_data,
     output reg [31:0] EXMEM_ALU_result,
     output reg EXMEM_mem_read,
     output reg EXMEM_mem_write, 
@@ -28,7 +28,6 @@ module  EXMEM(
 
     initial begin
         EXMEM_dst_reg = 0;
-        EXMEM_read_reg2 = 0;
         EXMEM_ALU_result = 0;
         EXMEM_mem_read = 0;
         EXMEM_mem_write = 0;
@@ -41,7 +40,7 @@ module  EXMEM(
     
     always@(posedge clk) begin
         EXMEM_dst_reg <= IDEX_dst_reg;
-        EXMEM_read_reg2 <= IDEX_read_reg2;
+        EXMEM_store_data <= store_data;
         EXMEM_ALU_result <= ALU_result;
         EXMEM_mem_read <= IDEX_mem_read;
         EXMEM_mem_write <= IDEX_mem_write;

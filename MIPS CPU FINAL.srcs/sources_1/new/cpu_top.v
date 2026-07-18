@@ -61,9 +61,11 @@ module cpu_top(
     wire IDEX_data_sign;
     wire [1:0] IDEX_wb_src;
     wire IDEX_reg_write;
+    wire [31:0] store_data;
 
     // MEMORY ACCESS
     wire [4:0] EXMEM_dst_reg;
+    wire [31:0] EXMEM_store_data;
     wire [31:0] EXMEM_read_reg2;
     wire [31:0] EXMEM_ALU_result;
     wire [31:0] EXMEM_PC_plus4;
@@ -96,8 +98,8 @@ module cpu_top(
     wire hazard_IDEX_flush;
 
     // Forwarding module  
-    wire A_src, B_src;
-    wire [31:0] forward_A, forward_B;
+    wire A_src, B_src, C_src;
+    wire [31:0] forward_A, forward_B, forward_C;
     
     // Modifications 
     wire [31:0] read_reg1_rf, read_reg2_rf;
@@ -150,16 +152,18 @@ module cpu_top(
     
     adder_32b a1((IDEX_imm << 2), IDEX_PC_plus4, branch_address);
     pc_control g7(IDEX_branch, IDEX_jump, ALU_result, PC_src);
+    
+    assign store_data = C_src ? forward_C : IDEX_read_reg2;
 
     // EX/MEM
-    EXMEM p2(clk, IDEX_dst_reg, IDEX_read_reg2, ALU_result, IDEX_mem_read, IDEX_mem_write, 
-        IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, IDEX_PC_plus4, 
-        EXMEM_dst_reg, EXMEM_read_reg2, EXMEM_ALU_result, EXMEM_mem_read, EXMEM_mem_write, 
+    EXMEM p2(clk, IDEX_dst_reg, store_data, ALU_result, IDEX_mem_read, IDEX_mem_write, 
+        IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, IDEX_PC_plus4, EXMEM_dst_reg, 
+        EXMEM_store_data, EXMEM_ALU_result, EXMEM_mem_read, EXMEM_mem_write, 
         EXMEM_data_size, EXMEM_data_sign, EXMEM_wb_src, EXMEM_reg_write, EXMEM_PC_plus4);
 
     // MEMORY ACCESS
     data_memory g8(clk, EXMEM_mem_read, EXMEM_mem_write, EXMEM_data_size, EXMEM_data_sign, 
-        EXMEM_ALU_result, EXMEM_read_reg2, load_data);
+        EXMEM_ALU_result, EXMEM_store_data, load_data);
 
     // MEM/WB
     MEMWB p3(clk, EXMEM_dst_reg, EXMEM_ALU_result, EXMEM_PC_plus4, load_data, 
@@ -177,8 +181,9 @@ module cpu_top(
 
     // Forwarding unit
     forwarding_unit g10(IDEX_rs, IDEX_rt, EXMEM_dst_reg, MEMWB_dst_reg, EXMEM_reg_write, 
-        MEMWB_reg_write, EXMEM_ALU_result, write_back_data, forward_A, forward_B,
-        A_src, B_src);
+        MEMWB_reg_write, IDEX_mem_write, IDEX_ALU_src, EXMEM_ALU_result, write_back_data, 
+        forward_A, forward_B, forward_C, A_src, B_src, C_src);
+    
 
     // Hazard detection unit
     hazard_detection_unit g11(rs, rt, IDEX_mem_read, IDEX_rt, PC_en, IFID_en, 

@@ -1,12 +1,8 @@
-2001000A    // addi $1, $0, 10      -> $1 = 10
-20020014    // addi $2, $0, 20      -> $2 = 20
-08000006    // j instruction 6      -> Jump to address 24
-
-2003001E    // addi $3, $0, 30      -> SHOULD BE FLUSHED ($3 stays 0)
-20040028    // addi $4, $0, 40      -> SHOULD BE FLUSHED ($4 stays 0)
-20050032    // addi $5, $0, 50      -> SHOULD BE FLUSHED ($5 stays 0)
-
-2006003C    // addi $6, $0, 60      -> Executed ($6 = 60)
-
-
-
+20010005    // addi $1,$0,5     ; Index 0
+2002000A    // addi $2,$0,10    ; Index 1
+0C000005    // jal function    ; Index 2 -> Targets Index 5 ($31 gets address of next instruction: Index 3 * 4 = 12, or 0x0000000C)
+20050063    // addi $5,$0,99    ; Index 3
+08000007    // j end           ; Index 4 -> Targets Index 7 (FIXED from 0800000A)
+00221820    // function: add $3,$1,$2 ; Index 5
+03E00008    // jr $31           ; Index 6 -> Returns to Index 3
+00000000    // end: nop         ; Index 7
