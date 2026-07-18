@@ -2,7 +2,8 @@ This project implements a 32-bit 5 stage pipelined CPU written in Verilog capabl
 decode, execute, memory-access and writeback. These 5 stages increase the efficiency of the CPU as it can allow up to 5 instructions being processed simultaneously. There are still a few bugs
 with data memory handling that I am currently working on. 
 
-<img width="1193" height="809" alt="Screenshot 2026-07-04 022750" src="https://github.com/user-attachments/assets/c6726910-3f63-4fdb-b18e-51503674bd79" />
+<img width="1156" height="805" alt="Screenshot 2026-07-17 002854" src="https://github.com/user-attachments/assets/75210725-ae46-4581-bfd7-afc5d1bf8093" />
+
 
 The program below was loaded into instruction memory and used for testing:
 
