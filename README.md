@@ -11,7 +11,7 @@ This project implements a 32-bit five-stage pipelined MIPS CPU, designed and bui
 Instructions are stored in the `program.mem` file in hexadecimal format. The `instruction_memory` module loads this file during simulation, allowing the CPU to fetch and execute the program from instruction memory.
 
 
-### Arithmetic, Shifitng and Logical 
+### Arithmetic, Shiftng and Logical 
 
 Instructions: 
 ```
