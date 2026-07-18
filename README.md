@@ -7,7 +7,7 @@ This project implements a 32-bit five-stage pipelined MIPS CPU, designed and bui
 <img width="5588" height="3966" alt="cpu_image1" src="https://github.com/user-attachments/assets/9d011aec-7736-4e8c-8b7c-3b969327e71c" />
 
 
-## Testing CPU with MIPS instructions
+## Testing and Verification
 Instructions are stored in the `program.mem` file in hexadecimal format. The `instruction_memory` module loads this file during simulation, allowing the CPU to fetch and execute the program from instruction memory.
 
 
