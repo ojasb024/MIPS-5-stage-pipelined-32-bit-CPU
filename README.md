@@ -33,18 +33,16 @@ Houses the Data Memory module that is used for storing and/or loading instructio
 Consists of the 3 to 1 Writeback MUX with the select `[1:0] wb_src` that has data lines: `[31:0] MEMWB_ALU_result`, `[31:0] MEMWB_PC_plus4` and `[31:0] MEMWB_load_data`. This MUX outputs the corresponding data required from the instruction, for example `ADD` outputs `[31:0] MEMWB_ALU_result`, `LW` outputs `[31:0] MEMWB_load_data` and `JAL` outputs `[31:0] MEMWB_PC_plus4`.
 
 ### Pipelining 
-The CPU has 5 stages with 4 pipeline registers IF/ID, IF/EX, EX/MEM and MEM/WB in between each stage to move data from one stage to the next every clock positive edge. This allows the CPU to increase efficiency as 5 instructions can be processed during 1 clock cycle, without it the CPU would have to process 1 instruction per clock cycle
-
 The CPU uses a 5-stage pipeline with four pipeline registers (IF/ID, ID/EX, EX/MEM and MEM/WB) between each stage. These registers transfer data and control signals from one stage to the next on each positive clock edge. Pipelining improves throughput by allowing up to five instructions to be processed simultaneously, with each instruction occupying a different stage. Without pipelining, each instruction would need to complete all five stages before the next instruction could begin.
 
-<img width="858" height="332" alt="image" src="https://github.com/user-attachments/assets/2d7c788d-a149-466a-970d-8c450fa06991" />
+<img width="1615" height="197" alt="image" src="https://github.com/user-attachments/assets/a89aea64-16da-430d-8a2c-5f5c947a8658" />
  
 #### Simulation: 
 The signal `PC_plus4` is used to demonstrate the pipeline propagation, as it is the only signal that travels through each stage.  
 <img width="1614" height="199" alt="image" src="https://github.com/user-attachments/assets/3b14a80c-31ec-487d-9da0-221ce98c4cdf" />
 
 ### Forwarding unit
-The forwarding unit is essential because when an instruction's source register matches the destination register of the previous one or two instructions, it routes the newly calculated data directly to the ALU before it has even been written to the register file. It works by checking the destination register in Memory Access and Writeback Stages and comparing the register number with source registers in Execute stage. If there is a match, then it forwards the ALU_result from either Memory access (`EXMEM_ALU_result`) or Writeback (`MEMWB_ALU_result`) stages. This value is then fed through the forwarding MUXes (A or B depending on which source register matched) with the select (Outputted by forwarding unit) of the corresponding MUX set to 1. 
+The forwarding unit is essential because when an instruction's source register matches the destination register of the previous one or two instructions, it routes the newly calculated data directly to the ALU before it has even been written to the register file. It works by checking the destination register in Memory Access and Writeback Stages and comparing the register number with source registers in Execute stage. If there is a match, then it forwards `EXMEM_ALU_result` from Memory Access to forward to the next instruction or `write_back_data` from Writeback to forward to the next to next instruction. This value is then fed through the forwarding MUXes (A or B depending on which source register matched) with the select (Outputted by forwarding unit) of the corresponding MUX set to 1. 
 
 For example in the instruction set: 
 ```
@@ -71,8 +69,14 @@ AD090190    // sw    $t1, 400($t0)
 <img width="1614" height="315" alt="image" src="https://github.com/user-attachments/assets/de606b32-3035-42f8-b1e9-a72d15c80498" />
 From the simulation, the signals `IFID_en` and `PC_en` switch to 0 pausing PC and IFID while continuing IDEX, EXMEM and MEMWB pipeline registers. Hazard unit flush signal into IDEX goes high at this same time which inserts a NOP into the execute stage which is between the instructions (lw and last addi). 1 clock cycle later, the `A_src` signal goes high and value of $t2 (10) is forwarded, indicating that the `lw` instruction is in Writeback and `addi` is in Execute. 
 
+Jumping/Branching
+Jump/Branch instructions (as well as link e.g `JAL`) allow the program to move to different instruction to continue execution, and are required for things like function calls, loops and if statements. The CPU achieves this by changing the PC MUX select signal to allow different address (from jump/branch instruction) to be fed into PC, while also flushing the IFID and IDEX pipeline so the next 2 instructions after the jump/branch are not executed. This is achieved through the flush control module that detects if PC MUX select is not equal to 0 (default PC + 4 sequential execution), which then sets the IFID and IDEX flush signals to high. For linking instructions such as `JAL`, `JALR`, `BGEZAL` and `BLTZAL` the CPU stores the `MEMWB_PC_plus4` into `$ra` (register 31) which is required for function calls so the program knows which address to return to in the caller. 
+There are 3 different types of jump/branch data-lines into the PC MUX apart from PC+4: 
+**1. Target Address:** This is the `IDEX_target_address` signal that comes from instructions such as `J` and `JAL`
+**2. JR Address:** This address comes from the `ALU_result` for instructions `JR` and `JALR`. It is required for this address to be fed through ALU as the value comes from `readreg2`, thus ALU outputs B operand.  
+**3. Branch Address:** The branch address is formed by a 32 bit adder in Execute stage that adds the immediate shifted left by 2 with the `IDEX_PC_plus4`. This is because branch instructions embed the instruction offset value in the immediate field (x 4 to get byte offset), which needs to be added to the PC + 4 of that address to get the absolute address. 
+
 ## Testing and Verification
-Instructions are stored in the `program.mem` file in hexadecimal format. The `instruction_memory` module loads this file during simulation, allowing the CPU to fetch and execute the program from instruction memory.
 
 ### Arithmetic, Shiftng and Logical 
 
