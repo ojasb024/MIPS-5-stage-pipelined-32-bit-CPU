@@ -69,12 +69,12 @@ AD090190    // sw    $t1, 400($t0)
 <img width="1614" height="315" alt="image" src="https://github.com/user-attachments/assets/de606b32-3035-42f8-b1e9-a72d15c80498" />
 From the simulation, the signals `IFID_en` and `PC_en` switch to 0 pausing PC and IFID while continuing IDEX, EXMEM and MEMWB pipeline registers. Hazard unit flush signal into IDEX goes high at this same time which inserts a NOP into the execute stage which is between the instructions (lw and last addi). 1 clock cycle later, the `A_src` signal goes high and value of $t2 (10) is forwarded, indicating that the `lw` instruction is in Writeback and `addi` is in Execute. 
 
-Jumping/Branching
+### Jumping/Branching
 Jump/Branch instructions (as well as link e.g `JAL`) allow the program to move to different instruction to continue execution, and are required for things like function calls, loops and if statements. The CPU achieves this by changing the PC MUX select signal to allow different address (from jump/branch instruction) to be fed into PC, while also flushing the IFID and IDEX pipeline so the next 2 instructions after the jump/branch are not executed. This is achieved through the flush control module that detects if PC MUX select is not equal to 0 (default PC + 4 sequential execution), which then sets the IFID and IDEX flush signals to high. For linking instructions such as `JAL`, `JALR`, `BGEZAL` and `BLTZAL` the CPU stores the `MEMWB_PC_plus4` into `$ra` (register 31) which is required for function calls so the program knows which address to return to in the caller. 
 There are 3 different types of jump/branch data-lines into the PC MUX apart from PC+4: 
-**1. Target Address:** This is the `IDEX_target_address` signal that comes from instructions such as `J` and `JAL`
-**2. JR Address:** This address comes from the `ALU_result` for instructions `JR` and `JALR`. It is required for this address to be fed through ALU as the value comes from `readreg2`, thus ALU outputs B operand.  
-**3. Branch Address:** The branch address is formed by a 32 bit adder in Execute stage that adds the immediate shifted left by 2 with the `IDEX_PC_plus4`. This is because branch instructions embed the instruction offset value in the immediate field (x 4 to get byte offset), which needs to be added to the PC + 4 of that address to get the absolute address. 
+  1. **Target Address:** This is the `IDEX_target_address` signal that comes from instructions such as `J` and `JAL`
+  2. **JR Address:** This address comes from the `ALU_result` for instructions `JR` and `JALR`. It is required for this address to be fed through ALU as the value comes from `readreg2`, thus ALU outputs B operand.  
+  3. **Branch Address:** The branch address is formed by a 32 bit adder in Execute stage that adds the immediate shifted left by 2 with the `IDEX_PC_plus4`. This is because branch instructions embed the instruction offset value in the immediate field (x 4 to get byte offset), which needs to be added to the PC + 4 of that address to get the absolute address. 
 
 ## Testing and Verification
 
