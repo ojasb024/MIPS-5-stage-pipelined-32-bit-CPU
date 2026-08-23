@@ -1,10 +1,10 @@
 # MIPS 5 Stage Pipelined 32-bit CPU - Verilog
 
 ## Overview
-This project implements a 32-bit five-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports arithmetic, logical, memory, branch, and jump instructions and implements data forwarding, hazard detection, and pipeline stalling/flushing to correctly resolve data and control hazards while maintaining pipeline execution. 
+This project implements a 32-bit five-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports all native MIPS instructions and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
 
 ## CPU datapath
-<img width="5588" height="3966" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/2c79080e-1bdc-4089-b81e-c68f2218eaa0" />
+<img width="5588" height="3966" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/79358dc4-7357-4ba9-8329-b747eace4bfe" />
 
 ## CPU architecture and overall operation
 
@@ -57,12 +57,7 @@ The forwarding unit has to forward the value of $t0 from instruction 1s destinat
 <img width="1612" height="172" alt="image" src="https://github.com/user-attachments/assets/d851a828-8502-4789-8b6c-627452007b66" />
 
 ### Hazard detection unit
-The hazard detection unit was required for load-use hazards when loaded value is used in the next instruction. For example: 
-```
-Instruction 1: lw    $t0, 0($t1)
-Instruction 2: addi  $t2, $t0, 10
-```
-The `addi` requires `$t0` before the loaded value is available for forwarding. To resolve this, the CPU inserts NOP between the two instructions, allowing the `lw` to progress 2 stages ahead to load the value from Data memory where it can be forwarded from. The hazard detection unit checks whether `IDEX_rt` matches either `IFID_rs` or `IFID_rt` while `IDEX_mem_read` is high to confirm it is a load instruction. When detected, the PC and IF/ID register are paused for one cycle while the ID/EX stage is flushed, inserting a NOP. The `lw` can then progress through the pipeline, allowing its result to be forwarded on the following cycle.
+The hazard detection unit handles load-use hazards when a loaded value is used by the next instruction. The forwarding unit can forward `EXMEM_ALU_result` from MEM for next-instruction dependencies, or `write_back_data` from WB for dependencies two instructions later. `write_back_data` is selected by the WB MUX from `MEMWB_ALU_result`, `MEMWB_load_data`, or `MEMWB_PC_plus4` depending on the instruction (`MEMWB_PC_plus4` is used for linking). Therefore, a load must be at least two instructions ahead for direct forwarding otherwise the hazard unit inserts a one-cycle NOP in between to allow correct forwarding. The Hazard unit achieves this by detecting a match between `IDEX_rt` (Execute) and `rs` or `rt` (Decode) while `IDEX_mem_read` is high. If match is detected it sets `PC_en` and `IFID_en` to low and sets `hazard_IDEX_flush` to high which pauses the Fetch and Decode stage for 1 clock cycle while ID/EX, EX/MEM and MEM/WB continue. Since PC and IFID are paused, the `hazard_IDEX_flush` signal is needed IDEX outputs a NOP instead of the same instruction in Decode stage. 
 
 ### Simulation: 
 Instructions: 
@@ -74,8 +69,7 @@ AD090190    // sw    $t1, 400($t0)
 214B0005    // addi  $t3, $t2, 5
 ```
 <img width="1614" height="315" alt="image" src="https://github.com/user-attachments/assets/de606b32-3035-42f8-b1e9-a72d15c80498" />
-From the simulation, the signals `IFID_en` and `PC_en` switch to 0 pausing PC and IFID while continuing IDEX, EXMEM and MEMWB pipeline registers. Hazard unit flush signal into IDEX goes high at this same time which inserts 
-a NOP into the execute stage which is between the instructions (lw and last addi).  
+From the simulation, the signals `IFID_en` and `PC_en` switch to 0 pausing PC and IFID while continuing IDEX, EXMEM and MEMWB pipeline registers. Hazard unit flush signal into IDEX goes high at this same time which inserts a NOP into the execute stage which is between the instructions (lw and last addi). 1 clock cycle later, the `A_src` signal goes high and value of $t2 (10) is forwarded, indicating that the `lw` instruction is in Writeback and `addi` is in Execute. 
 
 ## Testing and Verification
 Instructions are stored in the `program.mem` file in hexadecimal format. The `instruction_memory` module loads this file during simulation, allowing the CPU to fetch and execute the program from instruction memory.
