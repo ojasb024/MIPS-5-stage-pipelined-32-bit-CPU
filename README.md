@@ -22,7 +22,7 @@ The Decode stage contains the `control_unit`, `register_file`, `sign_extend`, an
 The Execute stage is responsible for executing the instruction, generating PC select and calculating addresses for branches/jumps. It consists of the following modules: 
 1. **ALU:** Completes the operation embedded in the instruction such as add, subtract, shift, bitwise logical (AND, OR, XOR, NOT(OR)), SLT (set less than) as well as setting output A or B.
 2. **ALU control:** Outputs 4 bit ALU operation signal `[3:0] ALU_cont` that determines the operation executed by the ALU. 
-3. **Branch address adder:** For branch instructions the address offset from current PC + 4 is embedded in the instruction. The offset is shifted left by 2 bits and added to PC + 4 (PC + 4 for the instruction currently in Execute stage, not current PC + 4). This address is fed into the PC MUX in Fetch stage as the 2nd data-line.
+3. **Branch address adder:** For branch instructions the address offset from current PC + 4 is embedded in the instruction. The offset is shifted left by 2 bits and added to PC + 4 (PC + 4 from Execute, not PC + 4 from Fetch). This address is fed into the PC MUX in Fetch stage as the 2nd data-line.
 4. **PC control:** Sets the select for the PC MUX `PC_src` based on signals: branch, jump, ALU_result. For branch instructions such as `BEQ` (branch if equal), `BNE` (branch if not equal), `BLEZ` (branch if less than or equal to 0) the ALU result is required to determine whether to branch or not. 
 5. **ALU A and B operand 2 to 1 MUXes:** MUX A has data lines: read_reg1 and shamt. MUX B has data lines: read_reg2 and immediate. These MUxes are controlled by same select `ALU_src` with 0 for read_reg (default), 1 for immediate (into B), 2 for shamt (into A).
 
