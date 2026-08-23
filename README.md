@@ -35,11 +35,9 @@ Consists of the 3 to 1 Writeback MUX with the select `[1:0] wb_src` that has dat
 ### Pipelining 
 The CPU uses a 5-stage pipeline with four pipeline registers (IF/ID, ID/EX, EX/MEM and MEM/WB) between each stage. These registers transfer data and control signals from one stage to the next on each positive clock edge. Pipelining improves throughput by allowing up to five instructions to be processed simultaneously, with each instruction occupying a different stage. Without pipelining, each instruction would need to complete all five stages before the next instruction could begin.
 
-<img width="1615" height="197" alt="image" src="https://github.com/user-attachments/assets/a89aea64-16da-430d-8a2c-5f5c947a8658" />
- 
 #### Simulation: 
 The signal `PC_plus4` is used to demonstrate the pipeline propagation, as it is the only signal that travels through each stage.  
-<img width="1614" height="199" alt="image" src="https://github.com/user-attachments/assets/3b14a80c-31ec-487d-9da0-221ce98c4cdf" />
+<img width="1615" height="197" alt="image" src="https://github.com/user-attachments/assets/a89aea64-16da-430d-8a2c-5f5c947a8658" />
 
 ### Forwarding unit
 The forwarding unit is essential because when an instruction's source register matches the destination register of the previous one or two instructions, it routes the newly calculated data directly to the ALU before it has even been written to the register file. It works by checking the destination register in Memory Access and Writeback Stages and comparing the register number with source registers in Execute stage. If there is a match, then it forwards `EXMEM_ALU_result` from Memory Access to forward to the next instruction or `write_back_data` from Writeback to forward to the next to next instruction. This value is then fed through the forwarding MUXes (A or B depending on which source register matched) with the select (Outputted by forwarding unit) of the corresponding MUX set to 1. 
