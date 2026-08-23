@@ -35,6 +35,8 @@ Consists of the 3 to 1 Writeback MUX with the select `[1:0] wb_src` that has dat
 ### Pipelining 
 The CPU uses a 5-stage pipeline with four pipeline registers (IF/ID, ID/EX, EX/MEM and MEM/WB) between each stage. These registers transfer data and control signals from one stage to the next on each positive clock edge. Pipelining improves throughput by allowing up to five instructions to be processed simultaneously, with each instruction occupying a different stage. Without pipelining, each instruction would need to complete all five stages before the next instruction could begin.
 
+<img width="858" height="332" alt="Screenshot 2026-08-23 025453" src="https://github.com/user-attachments/assets/35352232-016f-4314-ad88-e486ef1cf0dd" />
+
 #### Simulation: 
 The signal `PC_plus4` is used to demonstrate the pipeline propagation, as it is the only signal that travels through each stage.  
 <img width="1615" height="197" alt="image" src="https://github.com/user-attachments/assets/a89aea64-16da-430d-8a2c-5f5c947a8658" />
