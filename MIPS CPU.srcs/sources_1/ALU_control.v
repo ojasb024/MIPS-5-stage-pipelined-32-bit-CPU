@@ -37,7 +37,7 @@ module  ALU_control(
                         6'b001000: ALU_cont = 4'd13;
                         6'b001001: ALU_cont = 4'd13;
                         
-                        default: ALU_cont = 4'd14;
+                        default: ALU_cont = 0;
                     endcase
                 end
             4'b0011: ALU_cont = 4'd12;

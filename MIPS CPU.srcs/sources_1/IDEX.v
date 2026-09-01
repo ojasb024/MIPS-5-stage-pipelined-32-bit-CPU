@@ -3,7 +3,7 @@
 module  IDEX(
     input   clk,
     input   flush,
-    input   hazard_IDEX_flush,
+    input   en, 
     
     input   [25:0] target_address,
     input   [4:0] rs, rt, dst_reg,
@@ -22,6 +22,7 @@ module  IDEX(
     input   [1:0] wb_src,
     input   reg_write, 
     input   [31:0] IFID_PC_plus4,
+    input   [2:0] MDU_cont, 
 
     output  reg [25:0] IDEX_target_address,
     output  reg [4:0] IDEX_rs, IDEX_rt, IDEX_dst_reg,
@@ -39,7 +40,10 @@ module  IDEX(
     output  reg IDEX_data_sign,
     output  reg [1:0] IDEX_wb_src,
     output  reg IDEX_reg_write, 
-    output  reg [31:0] IDEX_PC_plus4
+    output  reg [31:0] IDEX_PC_plus4,
+    output  reg [2:0] IDEX_MDU_cont,
+    
+    output  reg div_reset_start
     );
 
     initial begin
@@ -63,19 +67,23 @@ module  IDEX(
         IDEX_wb_src = 0;
         IDEX_reg_write = 0;
         IDEX_PC_plus4 = 0;
+        IDEX_MDU_cont = 0;
+        div_reset_start = 0;
     end
-    
+
     always@(posedge clk) begin
-        if (flush || hazard_IDEX_flush)
-            begin
+        div_reset_start <= 0;
+
+        if (en) begin
+            if (flush) begin
                 IDEX_branch <= 0;
                 IDEX_jump <= 0;
                 IDEX_mem_read <= 0;
                 IDEX_mem_write <= 0;
                 IDEX_reg_write <= 0;
+                IDEX_MDU_cont <= 0;
             end
-        else  
-            begin
+            else begin
                 IDEX_target_address <= target_address;
                 IDEX_rs <= rs;
                 IDEX_rt <= rt; 
@@ -96,7 +104,14 @@ module  IDEX(
                 IDEX_wb_src <= wb_src;
                 IDEX_reg_write <= reg_write; 
                 IDEX_PC_plus4 <= IFID_PC_plus4;
+                IDEX_MDU_cont <= MDU_cont; 
+                
+                if (MDU_cont == 3'b011 || MDU_cont == 3'b100) 
+                    div_reset_start <= 1;
+                else
+                    div_reset_start <= 0;
             end
+        end
     end
      
 endmodule

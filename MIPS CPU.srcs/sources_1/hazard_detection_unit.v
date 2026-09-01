@@ -4,8 +4,7 @@ module  hazard_detection_unit(
     input   [4:0] IFID_rs, IFID_rt,
     input   IDEX_mem_read,
     input   [4:0] IDEX_rt,
-    output  reg PC_enable,
-    output  reg IFID_enable,
+    output  reg hazard_stall,
     output  reg hazard_IDEX_flush
     );
 
@@ -13,14 +12,12 @@ module  hazard_detection_unit(
         if ((IDEX_rt == IFID_rs || IDEX_rt == IFID_rt) 
             && IDEX_mem_read && IDEX_rt != 0)
             begin
-                PC_enable = 0;
-                IFID_enable = 0;
+                hazard_stall = 1;
                 hazard_IDEX_flush = 1;
             end
         else
             begin
-                PC_enable = 1;
-                IFID_enable = 1;
+                hazard_stall = 0;
                 hazard_IDEX_flush = 0;
             end 
     end

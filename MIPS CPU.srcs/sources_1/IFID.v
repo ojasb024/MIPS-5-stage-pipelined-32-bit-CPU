@@ -2,8 +2,8 @@
 
 module  IFID(
     input   clk,
-    input   en,
     input   flush,
+    input   en,
     
     input   [31:0] instruction,
     input   [31:0] PC,
@@ -20,17 +20,14 @@ module  IFID(
     always@(posedge clk) begin
         if (en)
         begin
-            if (flush) 
-                begin
-                    IFID_instruction <= 0;
-                    IFID_PC <= 0;
-                end
-            else 
-                begin
-                    IFID_instruction <= instruction;
-                    IFID_PC <= PC;
-                end
-       
+            if (flush) begin
+                IFID_instruction <= 0;
+                IFID_PC <= 0;
+            end
+            else begin
+                IFID_instruction <= instruction;
+                IFID_PC <= PC;
+            end
         end
     end
      

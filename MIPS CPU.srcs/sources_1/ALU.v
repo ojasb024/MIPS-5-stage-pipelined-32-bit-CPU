@@ -8,6 +8,7 @@ module ALU(
     
     always@(*) begin
         case (control)
+            4'd0: result = 0;
             4'd1: result = A + B;
             4'd3: result = A - B;
             4'd4: result = A & B;

@@ -20,13 +20,4 @@ module cpu_top_tb;
         $finish;
     end
     
-    initial begin
-        $monitor(
-            "t=%0t PC=%h instr=%h",
-            $time,
-            dut.PC,
-            dut.instruction
-        );
-    end
-
 endmodule

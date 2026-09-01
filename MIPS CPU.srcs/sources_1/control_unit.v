@@ -1,0 +1,253 @@
+`timescale 1ns / 1ps
+
+module  control_unit(
+    input   [5:0] opcode,
+    input   [5:0] func, 
+    input   [4:0] rt, 
+    output  reg reg_write,
+    output  reg [1:0] dst_reg_src,                                     
+    output  reg mem_read,                                      
+    output  reg mem_write,                                     
+    output  reg [1:0] wb_src,
+    output  reg [1:0] data_size,
+    output  reg data_sign,                                     
+    output  reg [3:0] branch,   
+    output  reg [1:0] jump,                                     
+    output  reg [1:0] ALU_src,                                       
+    output  reg [3:0] ALU_op, 
+    output  reg [2:0] MDU_cont
+    );
+
+    always@(*) begin
+        reg_write = 0;
+        dst_reg_src = 2'b10;
+        mem_read  = 0;
+        mem_write = 0;
+        wb_src = 0;
+        data_size = 0;
+        data_sign = 0;
+        branch = 0;
+        jump = 0;
+        ALU_src = 0;
+        ALU_op = 0;
+        MDU_cont = 0;
+
+        case(opcode)
+            // R-type
+            6'b000000: begin
+                reg_write = 1;                                                                    
+                ALU_op = 4'b0010; 
+                dst_reg_src = 2'b01;
+                case(func)
+                    // jr
+                    6'b001000: begin
+                        jump = 2'b11;
+                        reg_write = 0; 
+                    end
+                    // jalr 
+                    6'b001001: begin
+                        jump = 2'b11;
+                        dst_reg_src = 0;
+                    end
+                    6'b000000, 6'b000010, 
+                    6'b000011: begin
+                        ALU_src = 2'b10;
+                    end
+                    // MDU
+                    // mult
+                    6'b011000: begin
+                        MDU_cont = 3'b001;
+                        reg_write = 0;
+                    end
+                    // multu
+                    6'b011001: begin
+                        MDU_cont = 3'b010;
+                        reg_write = 0;
+                    end
+                    // div
+                    6'b011010: begin
+                        MDU_cont = 3'b011;
+                        reg_write = 0;
+                    end
+                    // divu
+                    6'b011011: begin
+                        MDU_cont = 3'b100;
+                        reg_write = 0;
+                    end
+                    // mfhi 
+                    6'b010000: begin
+                        MDU_cont = 3'b101;
+                        wb_src = 2'b11;
+                    end
+                    // mflo 
+                    6'b010010: begin
+                        MDU_cont = 3'b110;
+                        wb_src = 2'b11;
+                    end
+                    default:;
+                endcase 
+            end
+            // Arithmetic immediate  
+            // addi
+            6'b001000: begin
+                reg_write = 1;                                                                   
+                ALU_src = 2'b01;                                       
+            end
+            // addiu
+            6'b001001: begin
+                reg_write = 1;                                                                         
+                ALU_src = 2'b01;                                          
+            end
+            // slti
+            6'b001010: begin
+                reg_write = 1;                                                                         
+                ALU_src = 2'b01;                                       
+                ALU_op = 4'b0011;  
+            end
+            // sltiu
+            6'b001011: begin
+                reg_write = 1;                                                                          
+                ALU_src = 2'b01;                                       
+                ALU_op = 4'b0100;   
+            end
+            // Logical immediate
+            // andi
+            6'b001100: begin
+                reg_write = 1;                                                                       
+                ALU_src = 2'b01;                                       
+                ALU_op = 4'b0101;   
+            end
+            // ori
+            6'b001101: begin
+                reg_write = 1;                                                                          
+                ALU_src = 2'b01;                                       
+                ALU_op = 4'b0110;   
+            end
+            // xori
+            6'b001110: begin
+                reg_write = 1;                                                                        
+                ALU_src = 2'b01;                                       
+                ALU_op = 4'b0111;   
+            end
+            // lui
+            6'b001111: begin
+                reg_write = 1;                                                                          
+                ALU_src = 2'b01;                                       
+                ALU_op = 4'b1000;   
+            end
+            // Loads 
+            // lb 
+            6'b100000: begin
+                reg_write = 1;                                     
+                mem_read = 1;                                                                      
+                data_size = 2'b01;
+                data_sign = 1;                                                                        
+                ALU_src = 2'b01;
+                wb_src = 2'b10;                                        
+            end
+            // lh
+            6'b100001: begin
+                reg_write = 1;                                     
+                mem_read = 1;                                                                       
+                data_size = 2'b10;
+                data_sign = 1;                                                                        
+                ALU_src = 2'b01;
+                wb_src = 2'b10;                                        
+            end
+            // lw
+            6'b100011: begin   
+                reg_write = 1;                                     
+                mem_read = 1;                                                                         
+                data_size = 2'b11;
+                data_sign = 1;                                                                          
+                ALU_src = 2'b01;
+                wb_src = 2'b10;                                        
+            end
+            // lbu 
+            6'b100100: begin   
+                reg_write = 1;                                     
+                mem_read = 1;                                                                           
+                data_size = 2'b01;                                                                     
+                ALU_src = 2'b01;
+                wb_src = 2'b10;                                        
+            end
+            // lhu
+            6'b100101: begin   
+                reg_write = 1;                                     
+                mem_read = 1;                                                                          
+                data_size = 2'b10;                                                                          
+                ALU_src = 2'b01;
+                wb_src = 2'b10;                                        
+            end
+            // Stores 
+            // sb 
+            6'b101000: begin                                      
+                mem_write = 1;
+                data_size = 2'b01;                                                                         
+                ALU_src = 2'b01;                                        
+            end
+            // sh 
+            6'b101001: begin                                       
+                mem_write = 1;
+                data_size = 2'b10;                                                                                                                   
+                ALU_src = 2'b01;                                       
+            end
+            // sw 
+            6'b101011: begin                                                                   
+                mem_write = 1; 
+                data_size = 2'b11;                                                                                                             
+                ALU_src = 2'b01;                                       
+            end
+            // Branches
+            // beq
+            6'b000100: begin                                      
+                branch = 4'b0001;                                                                              
+                ALU_op = 4'b0001;   
+            end
+            // bne
+            6'b000101: begin                                      
+                branch = 4'b0010;                                                                             
+                ALU_op = 4'b0001;   
+            end
+            // blez
+            6'b000110: branch = 4'b0011;  
+            // bgtz
+            6'b000111: branch = 4'b0100;                                                                           
+            // special branch group
+            6'b000001: begin   
+                case(rt) 
+                    // bltz
+                    5'b00000: branch = 4'b0101;   
+                    // bgez
+                    5'b00001: branch = 4'b0110;  
+                    // bltzal
+                    5'b10000: begin
+                        branch = 4'b0111; 
+                        wb_src = 2'b01;    
+                        reg_write = 1; 
+                        dst_reg_src = 0;
+                    end                                     
+                    // bgezal
+                    5'b10001: begin
+                        branch = 4'b1000;
+                        wb_src = 2'b01;  
+                        reg_write = 1; 
+                        dst_reg_src = 0;                                    
+                    end
+                    default:;
+                endcase                                       
+            end
+            // j 
+            6'b000010: jump = 2'b01;                                          
+            // jal
+            6'b000011: begin
+                jump = 2'b10; 
+                wb_src = 2'b01;
+                reg_write = 1;
+                dst_reg_src = 0;
+            end  
+            default:;
+        endcase 
+    end
+    
+endmodule

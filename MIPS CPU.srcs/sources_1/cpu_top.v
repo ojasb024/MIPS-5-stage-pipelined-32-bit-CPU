@@ -63,6 +63,16 @@ module cpu_top(
     wire IDEX_reg_write;
     wire [31:0] store_data;
 
+    // MDU
+    wire [2:0] MDU_cont;
+    wire [2:0] IDEX_MDU_cont;
+    wire [31:0] MDU_result;
+    wire [31:0] EXMEM_MDU_result;
+    wire [31:0] MEMWB_MDU_result;    
+    wire div_reset_start;
+    wire div_done;
+    wire div_flush;
+
     // MEMORY ACCESS
     wire [4:0] EXMEM_dst_reg;
     wire [31:0] EXMEM_store_data;
@@ -76,6 +86,7 @@ module cpu_top(
     wire EXMEM_data_sign;
     wire [1:0] EXMEM_wb_src;
     wire EXMEM_reg_write;
+    wire [31:0] EXMEM_MDU_result;
 
     // WRITE BACK
     wire [4:0] MEMWB_dst_reg;
@@ -88,13 +99,18 @@ module cpu_top(
 
     // External Modules
 
-    // Flush control
+    // Flushing control
     wire IFID_flush;
     wire IDEX_flush;
+    wire EXMEM_flush;
 
-    // Hazard detection unit
+    // Stalling control
     wire PC_en;
     wire IFID_en;
+    wire IDEX_en; 
+
+    // Hazard detection unit
+    wire hazard_stall;
     wire hazard_IDEX_flush;
 
     // Forwarding module  
@@ -113,11 +129,11 @@ module cpu_top(
     instruction_memory g1(PC, instruction);
 
     // IF/ID
-    IFID p0(clk, IFID_en, IFID_flush, instruction, PC_plus4, IFID_instruction, IFID_PC_plus4);
+    IFID p0(clk, IFID_flush, IFID_en, instruction, PC_plus4, IFID_instruction, IFID_PC_plus4);
 
     // DECODE  
     control_unit g2(opcode, funct, rt, reg_write, dst_reg_src, mem_read, mem_write, wb_src, 
-        data_size, data_sign, branch, jump, ALU_src, ALU_op);
+        data_size, data_sign, branch, jump, ALU_src, ALU_op, MDU_cont);
     regfile g3(clk, MEMWB_reg_write, MEMWB_dst_reg, rs, rt, write_back_data, read_reg1_rf, 
         read_reg2_rf);
     sign_extend g4(imm, imm_se);
@@ -133,12 +149,13 @@ module cpu_top(
         ? write_back_data : read_reg2_rf;
 
     // ID/EX
-    IDEX p1(clk, IDEX_flush, hazard_IDEX_flush, target_address, rs, rt, dst_reg, read_reg1, 
+    IDEX p1(clk, IDEX_flush, IDEX_en, target_address, rs, rt, dst_reg, read_reg1, 
         read_reg2, imm_se, shamt, ALU_src, funct, ALU_op, branch, jump, mem_read, mem_write, 
-        data_size, data_sign, wb_src, reg_write, IFID_PC_plus4, IDEX_target_address, IDEX_rs, 
-        IDEX_rt, IDEX_dst_reg, IDEX_read_reg1, IDEX_read_reg2, IDEX_imm, IDEX_shamt, IDEX_ALU_src, 
-        IDEX_funct, IDEX_ALU_op, IDEX_branch, IDEX_jump, IDEX_mem_read, IDEX_mem_write, 
-        IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, IDEX_PC_plus4);
+        data_size, data_sign, wb_src, reg_write, IFID_PC_plus4, MDU_cont, IDEX_target_address, 
+        IDEX_rs, IDEX_rt, IDEX_dst_reg, IDEX_read_reg1, IDEX_read_reg2, IDEX_imm, IDEX_shamt, 
+        IDEX_ALU_src, IDEX_funct, IDEX_ALU_op, IDEX_branch, IDEX_jump, IDEX_mem_read, 
+        IDEX_mem_write, IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, 
+        IDEX_PC_plus4, IDEX_MDU_cont, div_reset_start);
 
     // EXECUTE
     mux_2to1_A_operand m_A(IDEX_ALU_src, IDEX_read_reg1, IDEX_shamt, A_operand);    
@@ -155,38 +172,44 @@ module cpu_top(
     
     assign store_data = C_src ? forward_C : IDEX_read_reg2;
 
+    MDU g8(clk, div_reset_start, IDEX_MDU_cont, A, B, MDU_result, div_done, div_flush);
+
     // EX/MEM
-    EXMEM p2(clk, IDEX_dst_reg, store_data, ALU_result, IDEX_mem_read, IDEX_mem_write, 
-        IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, IDEX_PC_plus4, EXMEM_dst_reg, 
-        EXMEM_store_data, EXMEM_ALU_result, EXMEM_mem_read, EXMEM_mem_write, 
-        EXMEM_data_size, EXMEM_data_sign, EXMEM_wb_src, EXMEM_reg_write, EXMEM_PC_plus4);
+    EXMEM p2(clk, EXMEM_flush, IDEX_dst_reg, store_data, ALU_result, IDEX_mem_read, 
+        IDEX_mem_write, IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, 
+        IDEX_PC_plus4, MDU_result, EXMEM_dst_reg, EXMEM_store_data, EXMEM_ALU_result, 
+        EXMEM_mem_read, EXMEM_mem_write, EXMEM_data_size, EXMEM_data_sign, EXMEM_wb_src, 
+        EXMEM_reg_write, EXMEM_PC_plus4, EXMEM_MDU_result);
 
     // MEMORY ACCESS
-    data_memory g8(clk, EXMEM_mem_read, EXMEM_mem_write, EXMEM_data_size, EXMEM_data_sign, 
+    data_memory g9(clk, EXMEM_mem_read, EXMEM_mem_write, EXMEM_data_size, EXMEM_data_sign, 
         EXMEM_ALU_result, EXMEM_store_data, load_data);
 
     // MEM/WB
     MEMWB p3(clk, EXMEM_dst_reg, EXMEM_ALU_result, EXMEM_PC_plus4, load_data, 
-        EXMEM_wb_src, EXMEM_reg_write, MEMWB_dst_reg, MEMWB_ALU_result, MEMWB_PC_plus4, 
-        MEMWB_load_data, MEMWB_wb_src, MEMWB_reg_write);
+        EXMEM_wb_src, EXMEM_reg_write, EXMEM_MDU_result, MEMWB_dst_reg, MEMWB_ALU_result, 
+        MEMWB_PC_plus4, MEMWB_load_data, MEMWB_wb_src, MEMWB_reg_write, MEMWB_MDU_result);
 
     // WRITE BACK
-    mux_3to1_32b m5(MEMWB_wb_src, MEMWB_ALU_result, MEMWB_PC_plus4, MEMWB_load_data, 
-        write_back_data);
+    writeback_mux m5(MEMWB_wb_src, MEMWB_ALU_result, MEMWB_PC_plus4, MEMWB_load_data, 
+        MEMWB_MDU_result, write_back_data);
 
     // External modules 
-    
-    // Flush control
-    flush_control g9(PC_src, hazard_IDEX_flush, IFID_flush, IDEX_flush);
 
     // Forwarding unit
     forwarding_unit g10(IDEX_rs, IDEX_rt, EXMEM_dst_reg, MEMWB_dst_reg, EXMEM_reg_write, 
         MEMWB_reg_write, IDEX_mem_write, IDEX_ALU_src, EXMEM_ALU_result, write_back_data, 
         forward_A, forward_B, forward_C, A_src, B_src, C_src);
     
-
     // Hazard detection unit
-    hazard_detection_unit g11(rs, rt, IDEX_mem_read, IDEX_rt, PC_en, IFID_en, 
+    hazard_detection_unit g11(rs, rt, IDEX_mem_read, IDEX_rt, hazard_stall, 
         hazard_IDEX_flush);
+
+    // Flushing control
+    flushing_control g12(PC_src, hazard_IDEX_flush, div_flush, IFID_flush, IDEX_flush, 
+        EXMEM_flush);
+
+    // Stalling control
+    stalling_control g13(clk, div_done, MDU_cont, hazard_stall, PC_en, IFID_en, IDEX_en);
 
 endmodule
