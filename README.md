@@ -1,10 +1,10 @@
 # MIPS 5 Stage Pipelined 32-bit CPU - Verilog
 
 ## Overview
-This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports nearly all native MIPS instructions (except multiplication and division) and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
+This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports all native MIPS instructions and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
 
 ## CPU datapath
-<img width="5588" height="3966" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/79358dc4-7357-4ba9-8329-b747eace4bfe" />
+<img width="5325" height="3954" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/3e0a983a-8483-4fd6-9ba7-19a28b8fa00f" />
 
 ## CPU Architecture and Operation
 
@@ -25,6 +25,7 @@ The Execute stage is responsible for executing the instruction, generating PC se
 3. **Branch address adder:** For branch instructions the address offset from current PC + 4 is embedded in the instruction. The offset is shifted left by 2 bits and added to PC + 4 (PC + 4 from Execute, not PC + 4 from Fetch). This address is fed into the PC MUX in Fetch stage as the 2nd data-line.
 4. **PC control:** Sets the select for the PC MUX `PC_src` based on signals: branch, jump, ALU_result. For branch instructions such as `BEQ` (branch if equal), `BNE` (branch if not equal), `BLEZ` (branch if less than or equal to 0) the ALU result is required to determine whether to branch or not. 
 5. **ALU A and B operand 2 to 1 MUXes:** MUX A has data lines: read_reg1 and shamt. MUX B has data lines: read_reg2 and immediate. These MUxes are controlled by same select `ALU_src` with 0 for read_reg (default), 1 for immediate (into B), 2 for shamt (into A).
+6. **MDU**: The MDU handles multiplication and division. It is explained in depth in the MDU section. 
 
 ### Memory Access
 Houses the Data Memory module that is used for storing and/or loading instructions. It has control signal inputs `EXMEM_mem_read` and `EXMEM_mem_write` that specify whether load or store and `[1:0] EXMEM_data_size` to specify if store/load is a word, halfword or byte and `EXMEM_data_sign` to keep them signed or unsigned (only for halfword and byte). The `[31:0] EXMEM_ALU_result` is the address calculated by the ALU in Execute stage for storing result in inside of the data memory. 
@@ -107,6 +108,50 @@ BEQ:
 200C000A    // PC = 20    addi $t4, $zero, 10  // branch target
 ```
 <img width="1616" height="308" alt="image" src="https://github.com/user-attachments/assets/a6246d77-09d7-4856-8ebd-15574fadde39" />
+
+### MDU
+The MDU performs multiplication and division (signed/unsigned) and it is a separate unit from the ALU. It consists of the registers `MFHI` and `MFLO` that store the result of multiplication/division. 
+`MULT`/`MULTU`: `MFHI`: upper 32 bits, `MFLO`: lower 32 bits. 
+`DIV`/`DIVU`: `MFHI`: remainder, `MFLO`: quotient.
+For multiplication, the MDU uses the `*` operator inside of a clocked block as this automatically synthesises onto the DSP slice located on many FPGA chips.  
+For division, the MDU implements restoring clocked division instead of the `/` operator in Verilog as it can synthesize into a large combinational division circuit that introduces many issues. Combinational division implements many stages of division in parallel which takes up a large amount of resources (logic gates) on the FPGA, it also has a long propagation delay due to its critical path being very long thus requiring a much slower CPU clock to account for this latency. Restoring clocked division is the best option as it uses minimal hardware due to it reusing the same subtractor hardware for each clock cycle and only stalls pipeline when division takes place. 
+
+#### unsigned_divider_32b
+
+#### Simulation: 
+```
+2001000A    // addi $1, $0, 10        -> $1  = 10
+20020003    // addi $2, $0, 3         -> $2  = 3
+
+00220018    // mult  $1, $2           -> HI:LO = 0:30
+00001812    // mflo  $3               -> $3  = 30
+00002010    // mfhi  $4               -> $4  = 0
+
+0022001A    // div   $1, $2           -> LO = 3, HI = 1
+00002812    // mflo  $5               -> $5  = 3
+00003010    // mfhi  $6               -> $6  = 1
+
+2007FFF6    // addi $7, $0, -10       -> $7  = -10
+20080003    // addi $8, $0, 3         -> $8  = 3
+
+00E80018    // mult  $7, $8           -> HI:LO = -1:-30
+00004812    // mflo  $9               -> $9  = -30
+00005010    // mfhi  $10              -> $10 = -1
+
+00E8001A    // div   $7, $8           -> LO = -3, HI = -1
+00005812    // mflo  $11              -> $11 = -3
+00006010    // mfhi  $12              -> $12 = -1
+
+00E80019    // multu $7, $8           -> unsigned result
+00006812    // mflo  $13              -> $13 = 4294967266
+00007010    // mfhi  $14              -> $14 = 2
+
+00E8001B    // divu  $7, $8           -> unsigned division
+00007812    // mflo  $15              -> $15 = 1431655762
+00008010    // mfhi  $16              -> $16 = 0
+```
+<img width="1614" height="473" alt="image" src="https://github.com/user-attachments/assets/b7a34f3b-eb92-4fef-92ee-9b48a3ddf6b5" />
+
 
 ## Testing and Verification
 
