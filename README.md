@@ -1,7 +1,7 @@
 # MIPS 5 Stage Pipelined 32-bit CPU - Verilog
 
 ## Overview
-This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports all native MIPS instructions and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
+This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports entire MIPS user-level ISA and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
 
 ## CPU datapath
 <img width="5325" height="3954" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/3e0a983a-8483-4fd6-9ba7-19a28b8fa00f" />
