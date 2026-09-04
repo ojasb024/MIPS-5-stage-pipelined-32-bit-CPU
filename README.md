@@ -110,13 +110,20 @@ BEQ:
 <img width="1616" height="308" alt="image" src="https://github.com/user-attachments/assets/a6246d77-09d7-4856-8ebd-15574fadde39" />
 
 ### MDU
-The MDU performs multiplication and division (signed/unsigned) and it is a separate unit from the ALU. It consists of the registers `MFHI` and `MFLO` that store the result of multiplication/division. 
-`MULT`/`MULTU`: `MFHI`: upper 32 bits, `MFLO`: lower 32 bits. 
-`DIV`/`DIVU`: `MFHI`: remainder, `MFLO`: quotient.
-For multiplication, the MDU uses the `*` operator inside of a clocked block as this automatically synthesises onto the DSP slice located on many FPGA chips.  
-For division, the MDU implements restoring clocked division instead of the `/` operator in Verilog as it can synthesize into a large combinational division circuit that introduces many issues. Combinational division implements many stages of division in parallel which takes up a large amount of resources (logic gates) on the FPGA, it also has a long propagation delay due to its critical path being very long thus requiring a much slower CPU clock to account for this latency. Restoring clocked division is the best option as it uses minimal hardware due to it reusing the same subtractor hardware for each clock cycle and only stalls pipeline when division takes place. 
+The MDU performs multiplication and division (signed/unsigned) and it is a separate unit from the ALU. It houses registers `MFHI` and `MFLO` that store the result of multiplication/division. 
+<br>**`MULT`/`MULTU`:** `MFHI`: upper 32 bits, `MFLO`: lower 32 bits.
+<br>**`DIV`/`DIVU`: `MFHI`:** remainder, `MFLO`: quotient.
+<br>For multiplication, the MDU uses the `*` operator that synthesizes onto dedicated FPGA DSP slices for fast multiplication. For division, restoring clocked division is implemented instead of `/`, avoiding a large combinational circuit that uses high number of resources (logic gates etc) and a long critical path requiring a slower CPU clock speed. Restoring division reuses the same subtractor each cycle, minimizing hardware usage and only stalling the pipeline during division.
 
+<br>When division instruction is detected in ID stage, the IDEX register sets `div_start` to high and the stalling_control sets PC, IFID and IDEX enables to low on the very next clock cycle, ensuring division starts and pipeline is paused exactly when the `DIV`/`DIVU` instruction enters EX stage. Once division is complete, the `div_done` signal goes high allowing stalling_control to resume the pipeline. The `div_flush` signal is also high while divison is occurring to enter NOPS in the MEM stage to ensure EX stage data is not duplicated. 
+ 
 #### unsigned_divider_32b
+This submodule is a FSM performs unsigned division using the dividend and divisor provided by the MDU and returns the unsigned remainder and quotient to the MDU. For signed division, the MDU converts negative inputs to positive magnitudes using 2s complement before division, then applies the correct signs to the resulting quotient and remainder after the division is complete. 
+**FSM states:** There are 3 states: `IDLE`, `BUSY` and `DONE`. When `start` goes high the current state transitions from `IDLE` to `BUSY` to start the division process. Once division is complete the state transitions from `BUSY` to `DONE` for 1 clk cycle and then back to `IDLE`. 
+**Restoring Division:** In the `BUSY` state, restoring divison 
+
+
+and the MDU applies the correct signs (using 2s complement for negative). 
 
 #### Simulation: 
 ```
