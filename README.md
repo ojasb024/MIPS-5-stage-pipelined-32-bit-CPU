@@ -1,10 +1,10 @@
 # MIPS 5 Stage Pipelined 32-bit CPU - Verilog
 
 ## Overview
-This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports nearly all native MIPS instructions (except multiplication and division) and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
+This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports entire MIPS user-level ISA and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
 
 ## CPU datapath
-<img width="5588" height="3966" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/79358dc4-7357-4ba9-8329-b747eace4bfe" />
+<img width="5325" height="3954" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/91f19c89-f212-40e9-a31c-f3a4c1941977" />
 
 ## CPU Architecture and Operation
 
@@ -25,6 +25,7 @@ The Execute stage is responsible for executing the instruction, generating PC se
 3. **Branch address adder:** For branch instructions the address offset from current PC + 4 is embedded in the instruction. The offset is shifted left by 2 bits and added to PC + 4 (PC + 4 from Execute, not PC + 4 from Fetch). This address is fed into the PC MUX in Fetch stage as the 2nd data-line.
 4. **PC control:** Sets the select for the PC MUX `PC_src` based on signals: branch, jump, ALU_result. For branch instructions such as `BEQ` (branch if equal), `BNE` (branch if not equal), `BLEZ` (branch if less than or equal to 0) the ALU result is required to determine whether to branch or not. 
 5. **ALU A and B operand 2 to 1 MUXes:** MUX A has data lines: read_reg1 and shamt. MUX B has data lines: read_reg2 and immediate. These MUxes are controlled by same select `ALU_src` with 0 for read_reg (default), 1 for immediate (into B), 2 for shamt (into A).
+6. **MDU**: The MDU handles multiplication and division. It is explained in depth in the MDU section. 
 
 ### Memory Access
 Houses the Data Memory module that is used for storing and/or loading instructions. It has control signal inputs `EXMEM_mem_read` and `EXMEM_mem_write` that specify whether load or store and `[1:0] EXMEM_data_size` to specify if store/load is a word, halfword or byte and `EXMEM_data_sign` to keep them signed or unsigned (only for halfword and byte). The `[31:0] EXMEM_ALU_result` is the address calculated by the ALU in Execute stage for storing result in inside of the data memory. 
@@ -51,14 +52,13 @@ Instruction 2: addi  $t1, $t0, 10
 ```
 The forwarding unit has to forward the value of $t0 from instruction 1s destination register into instruction 2s source registers, otherwise Instruction 2 would use a old value for $t0.
 
-#### Simulation: 
+#### Simulation Waveform:
 <img width="1612" height="172" alt="image" src="https://github.com/user-attachments/assets/d851a828-8502-4789-8b6c-627452007b66" />
 
 ### Hazard detection unit
 The hazard detection unit handles load-use hazards when a loaded value is used by the next instruction. The forwarding unit can forward `EXMEM_ALU_result` from MEM for next-instruction dependencies, or `write_back_data` from WB for dependencies two instructions later. `write_back_data` is selected by the WB MUX from `MEMWB_ALU_result`, `MEMWB_load_data`, or `MEMWB_PC_plus4` depending on the instruction (`MEMWB_PC_plus4` is used for linking). Therefore, a load must be at least two instructions ahead for direct forwarding otherwise the hazard unit inserts a one-cycle NOP in between to allow correct forwarding. The Hazard unit achieves this by detecting a match between `IDEX_rt` (Execute) and `rs` or `rt` (Decode) while `IDEX_mem_read` is high. If match is detected it sets `PC_en` and `IFID_en` to low and sets `hazard_IDEX_flush` to high which pauses the Fetch and Decode stage for 1 clock cycle while ID/EX, EX/MEM and MEM/WB continue. Since PC and IFID are paused, the `hazard_IDEX_flush` signal is needed IDEX outputs a NOP instead of the same instruction in Decode stage. 
 
-#### Simulation: 
-Instructions: 
+### Instructions: 
 ```
 20080000    // addi  $t0, $zero, 0
 2009000A    // addi  $t1, $zero, 10
@@ -66,6 +66,8 @@ AD090190    // sw    $t1, 400($t0)
 8D0A0190    // lw    $t2, 400($t0)
 214B0005    // addi  $t3, $t2, 5
 ```
+
+#### Simulation Waveform:
 <img width="1614" height="315" alt="image" src="https://github.com/user-attachments/assets/de606b32-3035-42f8-b1e9-a72d15c80498" />
 From the simulation, the signals `IFID_en` and `PC_en` switch to 0 pausing PC and IFID while continuing IDEX, EXMEM and MEMWB pipeline registers. Hazard unit flush signal into IDEX goes high at this same time which inserts a NOP into the execute stage which is between the instructions (lw and last addi). 1 clock cycle later, the `A_src` signal goes high and value of $t2 (10) is forwarded, indicating that the `lw` instruction is in Writeback and `addi` is in Execute. 
 
@@ -76,7 +78,7 @@ There are 3 different types of jump/branch data-lines into the PC MUX apart from
   2. **JR Address:** This address comes from the `ALU_result` for instructions `JR` and `JALR`. It is required for this address to be fed through ALU as the value comes from `readreg2`, thus ALU outputs B operand.  
   3. **Branch Address:** The branch address is formed by a 32 bit adder in Execute stage that adds the immediate shifted left by 2 with the `IDEX_PC_plus4`. This is because branch instructions embed the instruction offset value in the immediate field (x 4 to get byte offset), which needs to be added to the PC + 4 of that address to get the absolute address. 
 
-#### Simulation
+#### Simulation Waveform:
 J: 
 ```
 20080005    // addi $t0, $zero, 5
@@ -108,173 +110,303 @@ BEQ:
 ```
 <img width="1616" height="308" alt="image" src="https://github.com/user-attachments/assets/a6246d77-09d7-4856-8ebd-15574fadde39" />
 
+### MDU
+The MDU performs multiplication and division (signed/unsigned) and it is a separate unit from the ALU. It houses registers `HI` and `LO` that store the result of multiplication/division. 
+<br>**`MULT`/`MULTU`:** `HI`: upper 32 bits, `LO`: lower 32 bits.
+<br>**`DIV`/`DIVU`: `HI`:** remainder, `LO`: quotient.
+<br>For multiplication, the MDU uses the `*` operator that synthesizes onto dedicated FPGA DSP slices for fast multiplication. For division, restoring clocked division is implemented instead of `/`, avoiding a large combinational circuit that uses high number of resources (logic gates etc) and a long critical path requiring a slower CPU clock speed. Restoring division reuses the same subtractor each cycle, minimizing hardware usage and only stalling the pipeline during division.
+
+<br>When division instruction is detected in ID stage, the IDEX register sets `div_start` to high and the stalling_control sets PC, IFID and IDEX enables to low on the very next clock cycle, ensuring division starts and pipeline is paused exactly when the `DIV`/`DIVU` instruction enters EX stage. Once division is complete, the `div_done` signal goes high allowing stalling_control to resume the pipeline. The `div_flush` signal is also high while divison is occurring to enter NOPS in the MEM stage to ensure EX stage data is not duplicated. 
+ 
+#### 32-bit Unsigned Divider
+This submodule is a FSM performs unsigned division using the dividend and divisor provided by the MDU and returns the unsigned remainder and quotient to the MDU. For signed division, the MDU converts negative inputs to positive magnitudes using 2s complement before division, then applies the correct signs to the resulting quotient and remainder after the division is complete. 
+<br>**FSM states:** There are 3 states: `IDLE`, `BUSY` and `DONE`. When `start` goes high the current state transitions from `IDLE` to `BUSY` to start the division process. Once division is complete the state transitions from `BUSY` to `DONE` for 1 clk cycle and then back to `IDLE`. 
+<br>**Restoring clocked Division:** Each clock cycle, the divider shifts `A` left and brings in the next bit of the dividend from `Q[31]`. It then compares `A_shifted` with the divisor `M`: if `A_shifted` >= `M`, it subtracts `M` and puts a 1 into LSB of `Q`, otherwise it puts 0. After 32 cycles, `Q` becomes quotient and `A` becomes remainder. 
+
+#### Simulation Waveform:
+```
+2008FFF6    // addi $8, $zero, -10      → $8 = -10
+20090003    // addi $9, $zero, 3        → $9 = 3
+
+01090018    // mult $8, $9              → LO = -30, HI = -1
+0109001A    // div $8, $9               → LO = -3,  HI = -1
+
+20090000    // addi $9, $zero, 0        → $9 = 0 
+0109001A    // div $8, $9               → SKIP (Undefined)
+
+00005012    // mflo $10                 → $10 = LO
+00005810    // mfhi $11                 → $11 = HI
+```
+<img width="1891" height="339" alt="Screenshot 2026-09-06 010939" src="https://github.com/user-attachments/assets/73130cf9-764c-455b-ab1b-aa1dea794917" />
+
+
 ## Testing and Verification
 
-### Array Sum and Double 
-MIPS Assembly: 
+### Basic array processing program 
+
+The program starts in `main` and initializes $sp to 1024 (supporting MIPS full descending stack layout) and then stores the signed integer array [12, -5, 25, 7, -10, 30, 4, 18] in data memory. It then calls `process`, which uses separate functions to find the maximum (30), minimum (-10), sum (81) of the array and average (10), and then stores them in memory. Last it calls `transform_array` which calls `transform_value` to replace each element in array with ((x × 3) + 7) / 2, producing [21, -4, 41, 14, -11, 48, 9, 30]. 
+The final values in data memory should be: 
+Address: value
+0: 21
+4: -4
+8: 41 
+12: 14
+16: -11
+20: 48
+24: 9
+28: 30
+64: 30
+68: -10
+72: 81
+76: 10
+
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/7ececf9a-03af-4d57-9e15-91c059b3b81c" />
+
+### Code: 
 ```
-main:
-    addi $8, $zero, 400
-    addi $9, $zero, 10
-    sw   $9, 0($8)
+////////////////////////////////////////////////
+// main
+////////////////////////////////////////////////
 
-    addi $9, $zero, 20
-    sw   $9, 4($8)
+201D0400    // addi $sp, $zero, 1024
 
-    addi $9, $zero, 30
-    sw   $9, 8($8)
+2008000C    // addi $t0, $zero, 12
+AC080000    // sw $t0, 0($zero)
+2008FFFB    // addi $t0, $zero, -5
+AC080004    // sw $t0, 4($zero)
+20080019    // addi $t0, $zero, 25
+AC080008    // sw $t0, 8($zero)
+20080007    // addi $t0, $zero, 7
+AC08000C    // sw $t0, 12($zero)
+2008FFF6    // addi $t0, $zero, -10
+AC080010    // sw $t0, 16($zero)
+2008001E    // addi $t0, $zero, 30
+AC080014    // sw $t0, 20($zero)
+20080004    // addi $t0, $zero, 4
+AC080018    // sw $t0, 24($zero)
+20080012    // addi $t0, $zero, 18
+AC08001C    // sw $t0, 28($zero)
 
-    addi $9, $zero, 40
-    sw   $9, 12($8)
+20040000    // addi $a0, $zero, 0        // array base
+20050008    // addi $a1, $zero, 8        // array length
+0C00001D    // jal process
 
-    add  $4, $8, $zero
-    addi $5, $zero, 4
-    jal  sum_array
-    jal  double_value
-    addi $16, $2, 0
-    j    end
+AC020040    // sw $v0, 64($zero)         // maximum
+AC030044    // sw $v1, 68($zero)         // minimum
+AC060048    // sw $a2, 72($zero)         // sum
 
-sum_array:
-    addi $2, $zero, 0
+00C04020    // add $t0, $a2, $zero
+20090008    // addi $t1, $zero, 8
+0109001A    // div $t0, $t1
+00005012    // mflo $t2
+AC0A004C    // sw $t2, 76($zero)         // average
 
-loop:
-    beq  $5, $zero, done
-    lw   $8, 0($4)
-    add  $2, $2, $8
-    addi $4, $4, 4
-    addi $5, $5, -1
-    bne  $5, $zero, loop
+0800001C    // done: j done
 
-done:
-    jr   $31
 
-double_value:
-    add  $2, $2, $2
-    jr   $31
+////////////////////////////////////////////////
+// process
+////////////////////////////////////////////////
 
-end:
-    nop
+23BDFFE8    // addi $sp, $sp, -24
+AFBF0014    // sw $ra, 20($sp)
+AFB00010    // sw $s0, 16($sp)
+AFB1000C    // sw $s1, 12($sp)
+AFB20008    // sw $s2, 8($sp)
+AFB30004    // sw $s3, 4($sp)
+AFB40000    // sw $s4, 0($sp)
+
+00808020    // add $s0, $a0, $zero
+00A08820    // add $s1, $a1, $zero
+
+02002020    // add $a0, $s0, $zero
+02202820    // add $a1, $s1, $zero
+0C000040    // jal find_max
+00409020    // add $s2, $v0, $zero
+
+02002020    // add $a0, $s0, $zero
+02202820    // add $a1, $s1, $zero
+0C00004E    // jal find_min
+00409820    // add $s3, $v0, $zero
+
+02002020    // add $a0, $s0, $zero
+02202820    // add $a1, $s1, $zero
+0C00005C    // jal sum_array
+0040A020    // add $s4, $v0, $zero
+
+02002020    // add $a0, $s0, $zero
+02202820    // add $a1, $s1, $zero
+0C000068    // jal transform_array
+
+02401020    // add $v0, $s2, $zero
+02601820    // add $v1, $s3, $zero
+02803020    // add $a2, $s4, $zero
+
+8FB40000    // lw $s4, 0($sp)
+8FB30004    // lw $s3, 4($sp)
+8FB20008    // lw $s2, 8($sp)
+8FB1000C    // lw $s1, 12($sp)
+8FB00010    // lw $s0, 16($sp)
+8FBF0014    // lw $ra, 20($sp)
+23BD0018    // addi $sp, $sp, 24
+03E00008    // jr $ra
+
+
+////////////////////////////////////////////////
+// find_max
+////////////////////////////////////////////////
+
+8C880000    // lw $t0, 0($a0)
+20090001    // addi $t1, $zero, 1
+
+// max_loop:
+0125502A    // slt $t2, $t1, $a1
+11400008    // beq $t2, $zero, max_done
+
+00095880    // sll $t3, $t1, 2
+008B6020    // add $t4, $a0, $t3
+8D8D0000    // lw $t5, 0($t4)
+
+010D702A    // slt $t6, $t0, $t5
+11C00001    // beq $t6, $zero, max_skip
+01A04020    // add $t0, $t5, $zero
+
+// max_skip:
+21290001    // addi $t1, $t1, 1
+08000042    // j max_loop
+
+// max_done:
+01001020    // add $v0, $t0, $zero
+03E00008    // jr $ra
+
+
+////////////////////////////////////////////////
+// find_min
+////////////////////////////////////////////////
+
+8C880000    // lw $t0, 0($a0)
+20090001    // addi $t1, $zero, 1
+
+// min_loop:
+0125502A    // slt $t2, $t1, $a1
+11400008    // beq $t2, $zero, min_done
+
+00095880    // sll $t3, $t1, 2
+008B6020    // add $t4, $a0, $t3
+8D8D0000    // lw $t5, 0($t4)
+
+01A8702A    // slt $t6, $t5, $t0
+11C00001    // beq $t6, $zero, min_skip
+01A04020    // add $t0, $t5, $zero
+
+// min_skip:
+21290001    // addi $t1, $t1, 1
+08000050    // j min_loop
+
+// min_done:
+01001020    // add $v0, $t0, $zero
+03E00008    // jr $ra
+
+
+////////////////////////////////////////////////
+// sum_array
+////////////////////////////////////////////////
+
+20080000    // addi $t0, $zero, 0
+20090000    // addi $t1, $zero, 0
+
+// sum_loop:
+0125502A    // slt $t2, $t1, $a1
+11400006    // beq $t2, $zero, sum_done
+
+00095880    // sll $t3, $t1, 2
+008B6020    // add $t4, $a0, $t3
+8D8D0000    // lw $t5, 0($t4)
+010D4020    // add $t0, $t0, $t5
+
+21290001    // addi $t1, $t1, 1
+0800005E    // j sum_loop
+
+// sum_done:
+01001020    // add $v0, $t0, $zero
+03E00008    // jr $ra
+
+
+////////////////////////////////////////////////
+// transform_array
+////////////////////////////////////////////////
+
+23BDFFF0    // addi $sp, $sp, -16
+AFBF000C    // sw $ra, 12($sp)
+AFB00008    // sw $s0, 8($sp)
+AFB10004    // sw $s1, 4($sp)
+AFB20000    // sw $s2, 0($sp)
+
+00008020    // add $s0, $zero, $zero
+00808820    // add $s1, $a0, $zero
+00A09020    // add $s2, $a1, $zero
+
+// trans_loop:
+0212402A    // slt $t0, $s0, $s2
+11000009    // beq $t0, $zero, trans_done
+
+00104880    // sll $t1, $s0, 2
+02295020    // add $t2, $s1, $t1
+8D440000    // lw $a0, 0($t2)
+
+0C000081    // jal transform_value
+
+00104880    // sll $t1, $s0, 2
+02295020    // add $t2, $s1, $t1
+AD420000    // sw $v0, 0($t2)
+
+22100001    // addi $s0, $s0, 1
+08000070    // j trans_loop
+
+// trans_done:
+8FB20000    // lw $s2, 0($sp)
+8FB10004    // lw $s1, 4($sp)
+8FB00008    // lw $s0, 8($sp)
+8FBF000C    // lw $ra, 12($sp)
+23BD0010    // addi $sp, $sp, 16
+03E00008    // jr $ra
+
+
+////////////////////////////////////////////////
+// transform_value
+//
+// ((x * 3) + 7) / 2
+////////////////////////////////////////////////
+
+20080003    // addi $t0, $zero, 3
+00880018    // mult $a0, $t0
+00004812    // mflo $t1
+21290007    // addi $t1, $t1, 7
+200A0002    // addi $t2, $zero, 2
+012A001A    // div $t1, $t2
+00005812    // mflo $t3
+
+396B0055    // xori $t3, $t3, 0x55
+396B0055    // xori $t3, $t3, 0x55
+
+01601020    // add $v0, $t3, $zero
+03E00008    // jr $ra
 ```
-Machine code: 
-```
-20080190    // addi $8, $zero, 400     $8 = 400
-2009000A    // addi $9, $zero, 10      $9 = 10
-AD090000    // sw $9, 0($8)            MEM[400] = 10
-20090014    // addi $9, $zero, 20      $9 = 20
-AD090004    // sw $9, 4($8)            MEM[404] = 20
-2009001E    // addi $9, $zero, 30      $9 = 30
-AD090008    // sw $9, 8($8)            MEM[408] = 30
-20090028    // addi $9, $zero, 40      $9 = 40
-AD09000C    // sw $9, 12($8)           MEM[412] = 40
-01002020    // add $4, $8, $zero       $4 = 400
-20050004    // addi $5, $zero, 4       $5 = 4
-0C00000F    // jal 60                  $31 = 48
-0C000017    // jal 92                  $31 = 52
-20500000    // addi $16, $2, 0         $16 = 200
-0800000D    // j 52                    END
-20020000    // addi $2, $zero, 0       $2 = 0
-10A00005    // beq $5, $zero, 5       
-8C880000    // lw $8, 0($4)            $8 = MEM[$4]
-00481020    // add $2, $2, $8          $2 = $2 + $8
-20840004    // addi $4, $4, 4          $4 = $4 + 4
-20A5FFFF    // addi $5, $5, -1         $5 = $5 - 1
-14A0FFFA    // bne $5, $zero, -6
-03E00008    // jr $31                  return
-00421020    // add $2, $2, $2          $2 = $2 × 2
-03E00008    // jr $31                  return
-00000000    // NOP
-```
 
-### Simulation: 
-<img width="1613" height="334" alt="image" src="https://github.com/user-attachments/assets/62e6a74c-04a8-411a-a156-cb00f5d461a7" />
+### Simulation Waveform: 
 
-### Find Array Maximum and Double 
-MIPS Assembly: 
-```
-main:
-    addi $8, $zero, 500
-    addi $9, $zero, 7
-    sw   $9, 0($8)
+The final values in data memory are shown in the waveform below: 
+<img width="1891" height="377" alt="image" src="https://github.com/user-attachments/assets/fc5f0ffe-2ad9-4828-b65f-ea29c6cbab88" />
 
-    addi $9, $zero, 3
-    sw   $9, 4($8)
 
-    addi $9, $zero, 12
-    sw   $9, 8($8)
+## Vivado Netlist Schematic 
 
-    addi $9, $zero, 5
-    sw   $9, 12($8)
+The synthesized Vivado netlist shows the hardware implementation of the processor, including the datapath, pipeline registers, control logic, memories, and supporting modules.
 
-    addi $9, $zero, 9
-    sw   $9, 16($8)
+<img width="1698" height="448" alt="image" src="https://github.com/user-attachments/assets/25c1012d-4fda-43f1-9276-631298fea6db" />
 
-    add  $4, $8, $zero
-    addi $5, $zero, 5
-    jal  find_max
-    jal  double_value
-    addi $16, $2, 0
-    j    end
 
-find_max:
-    addi $2, $zero, 0
 
-loop:
-    beq  $5, $zero, done
-    lw   $9, 0($4)
-    slt  $10, $2, $9
-    beq  $10, $zero, skip
-    add  $2, $9, $zero
 
-skip:
-    addi $4, $4, 4
-    addi $5, $5, -1
-    bne  $5, $zero, loop
-
-done:
-    jr   $31
-
-double_value:
-    add  $2, $2, $2
-    jr   $31
-
-end:
-    nop
-```
-Machine code: 
-```
-200801F4    // addi $8, $zero, 500
-20090007    // addi $9, $zero, 7
-AD090000    // sw $9, 0($8)
-20090003    // addi $9, $zero, 3
-AD090004    // sw $9, 4($8)
-2009000C    // addi $9, $zero, 12
-AD090008    // sw $9, 8($8)
-20090005    // addi $9, $zero, 5
-AD09000C    // sw $9, 12($8)
-20090009    // addi $9, $zero, 9
-AD090010    // sw $9, 16($8)
-01002020    // add $4, $8, $zero
-20050005    // addi $5, $zero, 5
-0C000011    // jal 68
-0C00001B    // jal 108
-20500000    // addi $16, $2, 0
-0800001D    // j 116
-20020000    // addi $2, $zero, 0
-10A00007    // beq $5, $zero, 7
-8C890000    // lw $9, 0($4)
-0049502A    // slt $10, $2, $9
-11400001    // beq $10, $zero, 1
-01201020    // add $2, $9, $zero
-20840004    // addi $4, $4, 4
-20A5FFFF    // addi $5, $5, -1
-14A0FFF8    // bne $5, $zero, -8
-03E00008    // jr $31
-00421020    // add $2, $2, $2
-03E00008    // jr $31
-00000000    // NOP
-```
-
-### Simulation
-<img width="1615" height="359" alt="image" src="https://github.com/user-attachments/assets/69981228-872c-4129-affe-eb2413b27bcf" />
 
 
