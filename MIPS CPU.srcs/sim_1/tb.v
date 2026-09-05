@@ -14,10 +14,5 @@ module cpu_top_tb;
         forever #50 clk = ~clk;
     end
     
-    // End simulation
-    initial begin
-        #2000;
-        $finish;
-    end
     
 endmodule

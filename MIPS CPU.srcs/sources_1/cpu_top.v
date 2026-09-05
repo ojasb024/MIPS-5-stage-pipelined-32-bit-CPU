@@ -69,7 +69,7 @@ module cpu_top(
     wire [31:0] MDU_result;
     wire [31:0] EXMEM_MDU_result;
     wire [31:0] MEMWB_MDU_result;    
-    wire div_reset_start;
+    wire div_start;
     wire div_done;
     wire div_flush;
 
@@ -155,7 +155,7 @@ module cpu_top(
         IDEX_rs, IDEX_rt, IDEX_dst_reg, IDEX_read_reg1, IDEX_read_reg2, IDEX_imm, IDEX_shamt, 
         IDEX_ALU_src, IDEX_funct, IDEX_ALU_op, IDEX_branch, IDEX_jump, IDEX_mem_read, 
         IDEX_mem_write, IDEX_data_size, IDEX_data_sign, IDEX_wb_src, IDEX_reg_write, 
-        IDEX_PC_plus4, IDEX_MDU_cont, div_reset_start);
+        IDEX_PC_plus4, IDEX_MDU_cont, div_start);
 
     // EXECUTE
     mux_2to1_A_operand m_A(IDEX_ALU_src, IDEX_read_reg1, IDEX_shamt, A_operand);    
@@ -172,7 +172,7 @@ module cpu_top(
     
     assign store_data = C_src ? forward_C : IDEX_read_reg2;
 
-    MDU g8(clk, div_reset_start, IDEX_MDU_cont, A, B, MDU_result, div_done, div_flush);
+    MDU g8(clk, div_start, IDEX_MDU_cont, A, B, MDU_result, div_done, div_flush);
 
     // EX/MEM
     EXMEM p2(clk, EXMEM_flush, IDEX_dst_reg, store_data, ALU_result, IDEX_mem_read, 

@@ -43,7 +43,7 @@ module  IDEX(
     output  reg [31:0] IDEX_PC_plus4,
     output  reg [2:0] IDEX_MDU_cont,
     
-    output  reg div_reset_start
+    output  reg div_start
     );
 
     initial begin
@@ -68,11 +68,11 @@ module  IDEX(
         IDEX_reg_write = 0;
         IDEX_PC_plus4 = 0;
         IDEX_MDU_cont = 0;
-        div_reset_start = 0;
+        div_start = 0;
     end
 
     always@(posedge clk) begin
-        div_reset_start <= 0;
+        div_start <= 0;
 
         if (en) begin
             if (flush) begin
@@ -107,9 +107,9 @@ module  IDEX(
                 IDEX_MDU_cont <= MDU_cont; 
                 
                 if (MDU_cont == 3'b011 || MDU_cont == 3'b100) 
-                    div_reset_start <= 1;
+                    div_start <= 1;
                 else
-                    div_reset_start <= 0;
+                    div_start <= 0;
             end
         end
     end
