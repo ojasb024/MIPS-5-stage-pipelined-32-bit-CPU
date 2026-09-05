@@ -401,9 +401,7 @@ The final values in data memory are shown in the waveform below:
 
 ## Vivado Netlist Schematic 
 
-The synthesized Vivado netlist shows the hardware implementation of the processor, including the datapath, pipeline registers, control logic, memories, and supporting modules.<img width="5325" height="3954" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/cb957bb9-fc43-4bd7-a5e6-45210b7051e0" />
-<img width="5325" height="3954" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/e997e27f-baac-4578-a9b2-e5cdf4c92d65" />
-
+The synthesized Vivado netlist shows the hardware implementation of the processor, including the datapath, pipeline registers, control logic, memories, and supporting modules.
 
 <img width="1698" height="448" alt="image" src="https://github.com/user-attachments/assets/25c1012d-4fda-43f1-9276-631298fea6db" />
 
