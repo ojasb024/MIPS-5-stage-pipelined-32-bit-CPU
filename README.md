@@ -145,20 +145,20 @@ This submodule is a FSM performs unsigned division using the dividend and diviso
 ### Basic array processing program 
 
 The program starts in `main` and initializes $sp to 1024 (supporting MIPS full descending stack layout) and then stores the signed integer array [12, -5, 25, 7, -10, 30, 4, 18] in data memory. It then calls `process`, which uses separate functions to find the maximum (30), minimum (-10), sum (81) of the array and average (10), and then stores them in memory. Last it calls `transform_array` which calls `transform_value` to replace each element in array with ((x × 3) + 7) / 2, producing [21, -4, 41, 14, -11, 48, 9, 30]. 
-The final values in data memory should be: 
-Address: value
-0: 21
-4: -4
-8: 41 
-12: 14
-16: -11
-20: 48
-24: 9
-28: 30
-64: 30
-68: -10
-72: 81
-76: 10
+<br>The final values in data memory should be: 
+<br>Address: value
+<br>0: 21
+<br>4: -4
+<br>8: 41 
+<br>12: 14
+<br>16: -11
+<br>20: 48
+<br>24: 9
+<br>28: 30
+<br>64: 30
+<br>68: -10
+<br>72: 81
+<br>76: 10
 
 <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/7ececf9a-03af-4d57-9e15-91c059b3b81c" />
 
@@ -401,11 +401,13 @@ The final values in data memory are shown in the waveform below:
 
 ## Vivado Netlist Schematic 
 
-The synthesized Vivado netlist shows the hardware implementation of the processor, including the datapath, pipeline registers, control logic, memories, and supporting modules.
+The screenshot below shows the schematic of the synthesized netlist of the CPU which is the hardware implementation of the CPU. 
 
 <img width="1698" height="448" alt="image" src="https://github.com/user-attachments/assets/25c1012d-4fda-43f1-9276-631298fea6db" />
 
 
+## Use of AI 
+All Verilog code and architecture for the CPU was planned and designed myself first and then later optimized/debugged using AI to spot bugs that were a needle in a haystack within the CPU. AI was used heavily as a learning tool to understand the MIPS ISA and concepts in computer/digital design. All the MIPS test code and programs were written by AI as it is a rather tedious task to convert each MIPS assembly instruction to hexadecimal and create code for specific tests quickly. 
 
 
 
