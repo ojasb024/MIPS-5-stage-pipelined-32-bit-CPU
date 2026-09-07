@@ -401,7 +401,7 @@ The final values in data memory are shown in the waveform below:
 
 ## Vivado Netlist Schematic 
 
-The screenshot below shows the schematic of the synthesized netlist of the CPU which is the hardware implementation of the CPU. 
+The screenshot below shows the schematic of the synthesized netlist which is the hardware implementation of the CPU. 
 
 <img width="1698" height="448" alt="image" src="https://github.com/user-attachments/assets/25c1012d-4fda-43f1-9276-631298fea6db" />
 
