@@ -407,7 +407,7 @@ The screenshot below shows the schematic of the synthesized netlist which is the
 
 
 ## Use of AI 
-All Verilog code and architecture for the CPU was planned and designed myself first and then later optimized/debugged using AI to spot bugs that were a needle in a haystack within the CPU. AI was used heavily as a learning tool to understand the MIPS ISA and concepts in computer/digital design. All the MIPS test code and programs were written by AI as it is a rather tedious task to convert each MIPS assembly instruction to hexadecimal and create code for specific tests quickly. 
+All Verilog code and architecture for the CPU was planned and designed myself first and then later optimized/debugged using AI to spot bugs that were a needle in a haystack within the CPU. AI was used heavily as a learning tool to understand the MIPS ISA, concepts in computer/digital design and Verilog. All the MIPS test code and programs were written by AI as it is a rather tedious task to convert each MIPS assembly instruction to hexadecimal and create code for specific tests quickly. 
 
 
 
