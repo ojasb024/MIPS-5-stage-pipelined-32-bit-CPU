@@ -47,10 +47,10 @@ The forwarding unit is essential because when an instruction's source register m
 
 For example in the instruction set: 
 ```
-Instruction 1: addi  $t0, $zero, 5
-Instruction 2: addi  $t1, $t0, 10
+Instruction 1: addi $8, $0, 5
+Instruction 2: addi $9, $8, 10
 ```
-The forwarding unit has to forward the value of $t0 from instruction 1s destination register into instruction 2s source registers, otherwise Instruction 2 would use a old value for $t0.
+The forwarding unit has to forward the value of $8 from instruction 1s destination register into instruction 2s source registers, otherwise Instruction 2 would use a old value for $8.
 
 #### Simulation Waveform:
 <img width="1612" height="172" alt="image" src="https://github.com/user-attachments/assets/d851a828-8502-4789-8b6c-627452007b66" />
@@ -60,11 +60,11 @@ The hazard detection unit handles load-use hazards when a loaded value is used b
 
 ### Test Instructions: 
 ```
-20080000    // addi  $t0, $zero, 0
-2009000A    // addi  $t1, $zero, 10
-AD090190    // sw    $t1, 400($t0)
-8D0A0190    // lw    $t2, 400($t0)
-214B0005    // addi  $t3, $t2, 5
+20080000    // addi  $8,  $0, 0
+2009000A    // addi  $9,  $0, 10
+AD090190    // sw    $9,  400($8)
+8D0A0190    // lw    $10, 400($8)
+214B0005    // addi  $11, $10, 5
 ```
 
 #### Simulation Waveform:
@@ -81,32 +81,32 @@ There are 3 different types of jump/branch data-lines into the PC MUX apart from
 #### Test instructions and Simulation Waveforms:
 J: 
 ```
-20080005    // addi $t0, $zero, 5
+20080005    // addi $8,  $0, 5
 08000004    // j 16
-20090063    // addi $t1, $zero, 99   // should be flushed
-200A0063    // addi $t2, $zero, 99   // should be flushed
-200B000A    // addi $t3, $zero, 10
+20090063    // addi $9,  $0, 99   // should be flushed
+200A0063    // addi $10, $0, 99   // should be flushed
+200B000A    // addi $11, $0, 10
 ```
 <img width="1616" height="310" alt="image" src="https://github.com/user-attachments/assets/bc8af78f-fc3f-4f43-9f91-ec09595e11e6" />
 
 JR:
 ```
-20080005    // addi $t0, $zero, 5
+20080005    // addi $8,  $0, 5
 08000004    // j 16
-20090063    // addi $t1, $zero, 99   // should be flushed
-200A0063    // addi $t2, $zero, 99   // should be flushed
-200B000A    // addi $t3, $zero, 10
+20090063    // addi $9,  $0, 99   // should be flushed
+200A0063    // addi $10, $0, 99   // should be flushed
+200B000A    // addi $11, $0, 10
 ```
 <img width="1617" height="333" alt="image" src="https://github.com/user-attachments/assets/830f5512-06d7-4d24-946c-e407a29efdc4" />
 
 BEQ:
 ```
-20080005    // PC = 0     addi $t0, $zero, 5
-20090005    // PC = 4     addi $t1, $zero, 5
-11090002    // PC = 8     beq  $t0, $t1, 2
-200A0063    // PC = 12    addi $t2, $zero, 99   // should be flushed
-200B0063    // PC = 16    addi $t3, $zero, 99   // should be flushed
-200C000A    // PC = 20    addi $t4, $zero, 10  // branch target
+20080005    // PC = 0     addi $8,  $0, 5
+20090005    // PC = 4     addi $9,  $0, 5
+11090002    // PC = 8     beq  $8,  $9, 2
+200A0063    // PC = 12    addi $10, $0, 99   // should be flushed
+200B0063    // PC = 16    addi $11, $0, 99   // should be flushed
+200C000A    // PC = 20    addi $12, $0, 10   // branch target
 ```
 <img width="1616" height="308" alt="image" src="https://github.com/user-attachments/assets/a6246d77-09d7-4856-8ebd-15574fadde39" />
 
