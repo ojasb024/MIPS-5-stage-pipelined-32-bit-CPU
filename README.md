@@ -31,7 +31,7 @@ The Execute stage is responsible for executing the instruction, generating PC se
 Houses the Data Memory module that is used for storing and/or loading instructions. It has control signal inputs `EXMEM_mem_read` and `EXMEM_mem_write` that specify whether load or store and `[1:0] EXMEM_data_size` to specify if store/load is a word, halfword or byte and `EXMEM_data_sign` to keep them signed or unsigned (only for halfword and byte). The `[31:0] EXMEM_ALU_result` is the address calculated by the ALU in Execute stage for storing result in inside of the data memory. 
 
 ### Writeback 
-Consists of the 3 to 1 Writeback MUX with the select `[1:0] wb_src` that has data lines: `[31:0] MEMWB_ALU_result`, `[31:0] MEMWB_PC_plus4` and `[31:0] MEMWB_load_data`. This MUX outputs the corresponding data required from the instruction, for example `ADD` outputs `[31:0] MEMWB_ALU_result`, `LW` outputs `[31:0] MEMWB_load_data` and `JAL` outputs `[31:0] MEMWB_PC_plus4`.
+Consists of the 4 to 1 Writeback MUX with the select `[1:0] wb_src` that has data lines: `[31:0] MEMWB_ALU_result`, `[31:0] MEMWB_PC_plus4`, `[31:0] MEMWB_MDU_result` and `[31:0] MEMWB_load_data`. This MUX outputs the corresponding data required from the instruction, for example `ADD` outputs `[31:0] MEMWB_ALU_result`, `LW` outputs `[31:0] MEMWB_load_data`, `MFHI` outputs `[31:0] MEMWB_MDU_result` and `JAL` outputs `[31:0] MEMWB_PC_plus4`.
 
 ### Pipelining 
 The CPU uses a 5-stage pipeline with four pipeline registers (IF/ID, ID/EX, EX/MEM and MEM/WB) between each stage. These registers transfer data and control signals from one stage to the next on each positive clock edge. Pipelining improves throughput by allowing up to five instructions to be processed simultaneously, with each instruction occupying a different stage. Without pipelining, each instruction would need to complete all five stages before the next instruction could begin.
@@ -56,9 +56,9 @@ The forwarding unit has to forward the value of $t0 from instruction 1s destinat
 <img width="1612" height="172" alt="image" src="https://github.com/user-attachments/assets/d851a828-8502-4789-8b6c-627452007b66" />
 
 ### Hazard detection unit
-The hazard detection unit handles load-use hazards when a loaded value is used by the next instruction. The forwarding unit can forward `EXMEM_ALU_result` from MEM for next-instruction dependencies, or `write_back_data` from WB for dependencies two instructions later. `write_back_data` is selected by the WB MUX from `MEMWB_ALU_result`, `MEMWB_load_data`, or `MEMWB_PC_plus4` depending on the instruction (`MEMWB_PC_plus4` is used for linking). Therefore, a load must be at least two instructions ahead for direct forwarding otherwise the hazard unit inserts a one-cycle NOP in between to allow correct forwarding. The Hazard unit achieves this by detecting a match between `IDEX_rt` (Execute) and `rs` or `rt` (Decode) while `IDEX_mem_read` is high. If match is detected it sets `PC_en` and `IFID_en` to low and sets `hazard_IDEX_flush` to high which pauses the Fetch and Decode stage for 1 clock cycle while ID/EX, EX/MEM and MEM/WB continue. Since PC and IFID are paused, the `hazard_IDEX_flush` signal is needed IDEX outputs a NOP instead of the same instruction in Decode stage. 
+The hazard detection unit handles load-use hazards when a loaded value is used by the next instruction. The forwarding unit can forward `EXMEM_ALU_result` from MEM for next-instruction dependencies or `write_back_data` from WB for dependencies two instructions later. `write_back_data` is selected by the WB MUX that has inputs of all types of writeback data including load value data. Therefore a load must be at least two instructions ahead for forwarding, if less, then the hazard unit inserts a one-cycle NOP in between to allow correct forwarding. The Hazard unit achieves this by detecting a match between `IDEX_rt` (Execute) and `rs` or `rt` (Decode) while `IDEX_mem_read` is high. If match is detected it sets `PC_en` and `IFID_en` to low and sets `hazard_IDEX_flush` to high which pauses the Fetch and Decode stage for 1 clock cycle while ID/EX, EX/MEM and MEM/WB continue. Since PC and IFID are paused, the `hazard_IDEX_flush` signal is needed IDEX outputs a NOP instead of the same instruction in Decode stage. 
 
-### Instructions: 
+### Test Instructions: 
 ```
 20080000    // addi  $t0, $zero, 0
 2009000A    // addi  $t1, $zero, 10
@@ -78,7 +78,7 @@ There are 3 different types of jump/branch data-lines into the PC MUX apart from
   2. **JR Address:** This address comes from the `ALU_result` for instructions `JR` and `JALR`. It is required for this address to be fed through ALU as the value comes from `readreg2`, thus ALU outputs B operand.  
   3. **Branch Address:** The branch address is formed by a 32 bit adder in Execute stage that adds the immediate shifted left by 2 with the `IDEX_PC_plus4`. This is because branch instructions embed the instruction offset value in the immediate field (x 4 to get byte offset), which needs to be added to the PC + 4 of that address to get the absolute address. 
 
-#### Simulation Waveform:
+#### Test instructions and Simulation Waveforms:
 J: 
 ```
 20080005    // addi $t0, $zero, 5
@@ -123,7 +123,7 @@ This submodule is a FSM performs unsigned division using the dividend and diviso
 <br>**FSM states:** There are 3 states: `IDLE`, `BUSY` and `DONE`. When `start` goes high the current state transitions from `IDLE` to `BUSY` to start the division process. Once division is complete the state transitions from `BUSY` to `DONE` for 1 clk cycle and then back to `IDLE`. 
 <br>**Restoring clocked Division:** Each clock cycle, the divider shifts `A` left and brings in the next bit of the dividend from `Q[31]`. It then compares `A_shifted` with the divisor `M`: if `A_shifted` >= `M`, it subtracts `M` and puts a 1 into LSB of `Q`, otherwise it puts 0. After 32 cycles, `Q` becomes quotient and `A` becomes remainder. 
 
-#### Simulation Waveform:
+#### Test instructions:
 ```
 2008FFF6    // addi $8, $zero, -10      → $8 = -10
 20090003    // addi $9, $zero, 3        → $9 = 3
@@ -137,6 +137,7 @@ This submodule is a FSM performs unsigned division using the dividend and diviso
 00005012    // mflo $10                 → $10 = LO
 00005810    // mfhi $11                 → $11 = HI
 ```
+#### Simulation Waveform:
 <img width="1891" height="339" alt="Screenshot 2026-09-06 010939" src="https://github.com/user-attachments/assets/73130cf9-764c-455b-ab1b-aa1dea794917" />
 
 
