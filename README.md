@@ -4,7 +4,7 @@
 This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports entire MIPS user-level ISA and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
 
 ## CPU datapath
-<img width="5325" height="3954" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/91f19c89-f212-40e9-a31c-f3a4c1941977" />
+<img width="5367" height="3989" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/a8d232d2-5d62-4f63-b23d-496fbd91f2f9" />
 
 ## CPU Architecture and Operation
 
@@ -31,7 +31,7 @@ The Execute stage is responsible for executing the instruction, generating PC se
 Houses the Data Memory module that is used for storing and/or loading instructions. It has control signal inputs `EXMEM_mem_read` and `EXMEM_mem_write` that specify whether load or store and `[1:0] EXMEM_data_size` to specify if store/load is a word, halfword or byte and `EXMEM_data_sign` to keep them signed or unsigned (only for halfword and byte). The `[31:0] EXMEM_ALU_result` is the address calculated by the ALU in Execute stage for storing result in inside of the data memory. 
 
 ### Writeback 
-Consists of the 3 to 1 Writeback MUX with the select `[1:0] wb_src` that has data lines: `[31:0] MEMWB_ALU_result`, `[31:0] MEMWB_PC_plus4` and `[31:0] MEMWB_load_data`. This MUX outputs the corresponding data required from the instruction, for example `ADD` outputs `[31:0] MEMWB_ALU_result`, `LW` outputs `[31:0] MEMWB_load_data` and `JAL` outputs `[31:0] MEMWB_PC_plus4`.
+Consists of the 4 to 1 Writeback MUX with the select `[1:0] wb_src` that has data lines: `[31:0] MEMWB_ALU_result`, `[31:0] MEMWB_PC_plus4`, `[31:0] MEMWB_MDU_result` and `[31:0] MEMWB_load_data`. This MUX outputs the corresponding data required from the instruction, for example `ADD` outputs `[31:0] MEMWB_ALU_result`, `LW` outputs `[31:0] MEMWB_load_data`, `MFHI` outputs `[31:0] MEMWB_MDU_result` and `JAL` outputs `[31:0] MEMWB_PC_plus4`.
 
 ### Pipelining 
 The CPU uses a 5-stage pipeline with four pipeline registers (IF/ID, ID/EX, EX/MEM and MEM/WB) between each stage. These registers transfer data and control signals from one stage to the next on each positive clock edge. Pipelining improves throughput by allowing up to five instructions to be processed simultaneously, with each instruction occupying a different stage. Without pipelining, each instruction would need to complete all five stages before the next instruction could begin.
@@ -47,66 +47,73 @@ The forwarding unit is essential because when an instruction's source register m
 
 For example in the instruction set: 
 ```
-Instruction 1: addi  $t0, $zero, 5
-Instruction 2: addi  $t1, $t0, 10
+Instruction 1: addi $8, $0, 5
+Instruction 2: addi $9, $8, 10
 ```
-The forwarding unit has to forward the value of $t0 from instruction 1s destination register into instruction 2s source registers, otherwise Instruction 2 would use a old value for $t0.
+The forwarding unit has to forward the value of $8 from instruction 1s destination register into instruction 2s source registers, otherwise Instruction 2 would use a old value for $8.
 
 #### Simulation Waveform:
 <img width="1612" height="172" alt="image" src="https://github.com/user-attachments/assets/d851a828-8502-4789-8b6c-627452007b66" />
 
 ### Hazard detection unit
-The hazard detection unit handles load-use hazards when a loaded value is used by the next instruction. The forwarding unit can forward `EXMEM_ALU_result` from MEM for next-instruction dependencies, or `write_back_data` from WB for dependencies two instructions later. `write_back_data` is selected by the WB MUX from `MEMWB_ALU_result`, `MEMWB_load_data`, or `MEMWB_PC_plus4` depending on the instruction (`MEMWB_PC_plus4` is used for linking). Therefore, a load must be at least two instructions ahead for direct forwarding otherwise the hazard unit inserts a one-cycle NOP in between to allow correct forwarding. The Hazard unit achieves this by detecting a match between `IDEX_rt` (Execute) and `rs` or `rt` (Decode) while `IDEX_mem_read` is high. If match is detected it sets `PC_en` and `IFID_en` to low and sets `hazard_IDEX_flush` to high which pauses the Fetch and Decode stage for 1 clock cycle while ID/EX, EX/MEM and MEM/WB continue. Since PC and IFID are paused, the `hazard_IDEX_flush` signal is needed IDEX outputs a NOP instead of the same instruction in Decode stage. 
+This unit is responsible for detecting forwarding hazards with a few instructions that the forwarding unit cannot fix alone. This is because, the forwarding unit forwards `EXMEM_ALU_result` for next instruction forwarding and `write_back_data` for next-to-next instruction forwarding. The problem with this design is that the `ALU_result` is the destination register value for most instructions except `lw`/`lh`/`lhu`/`lb`/`lbu` that uses `load_data` and `mfhi`/`mflo` that uses `MDU_result`. Therefore the correct value to forward for any instruction is always `write_back_data` as it is outputted from the write back MUX that has datalines of all final destination register values. 
 
-### Instructions: 
+The hazard detection unit solves this issue by detecting if the instruction is a load or `mfhi`/`mflo` that requires forwarding its result into the very next instruction, and then setting `hazard_stall` and `hazard_IDEX_flush` to high for stalling control unit to pause Fetch and Decode stage, while flushing control unit inserts a NOP (No Operation Instruction) into Execute. This NOP is inserted between the two instructions so the `write_back_data` (could be `MDU_result` or `load_data` which is correct value) has to be forwarded instead of `EXMEM_ALU_result` while there is a NOP in Memory Access. 
+
+### Test Instructions: 
 ```
-20080000    // addi  $t0, $zero, 0
-2009000A    // addi  $t1, $zero, 10
-AD090190    // sw    $t1, 400($t0)
-8D0A0190    // lw    $t2, 400($t0)
-214B0005    // addi  $t3, $t2, 5
+20080064  // addi $8, $0, 100
+20090005  // addi $9, $0, 5
+
+01090018  // mult $8, $9
+00005012  // mflo $10
+214B000A  // addi $11, $10, 10
+
+AD090000  // sw $9, 0($8)
+8D0A0000  // lw $10, 0($8)
+214B000A  // addi $11, $10, 10
 ```
 
 #### Simulation Waveform:
-<img width="1614" height="315" alt="image" src="https://github.com/user-attachments/assets/de606b32-3035-42f8-b1e9-a72d15c80498" />
-From the simulation, the signals `IFID_en` and `PC_en` switch to 0 pausing PC and IFID while continuing IDEX, EXMEM and MEMWB pipeline registers. Hazard unit flush signal into IDEX goes high at this same time which inserts a NOP into the execute stage which is between the instructions (lw and last addi). 1 clock cycle later, the `A_src` signal goes high and value of $t2 (10) is forwarded, indicating that the `lw` instruction is in Writeback and `addi` is in Execute. 
+<img width="1890" height="331" alt="image" src="https://github.com/user-attachments/assets/d74fe52a-3423-4484-9e75-69386a4d31fd" />
+From the simulation, the `PC_en` and `IFID_en` go low at PC = 20 and PC = 32 which is why the PC stays at these values for 2 clock cycles instead of 1. Also `IDEX_flush` goes high which inserts the NOP into IDEX (EX stage). 
 
 ### Jumping/Branching
-Jump/Branch instructions allow the program to move to different instruction to continue execution, and are required for things like function calls, loops and if statements. The CPU achieves this by changing the PC MUX select signal to allow different address (from jump/branch instruction) to be fed into PC, while also flushing the IFID and IDEX pipeline so the next 2 instructions after the jump/branch are not executed. This is achieved through the flush control module that detects if PC MUX select is not equal to 0 (default PC + 4 sequential execution), which then sets the IFID and IDEX flush signals to high. For linking instructions such as `JAL`, `JALR`, `BGEZAL` and `BLTZAL` the CPU stores the `MEMWB_PC_plus4` into `$ra` (register 31) which is required for function calls so the program knows which address to return to in the caller. 
+Jump/branch instructions allow a program to change the order in which instructions are executed. They are essential for controlling the flow of a program and are used to implement things like function calls, loops, and if statements. The CPU achieves this by changing the PC MUX select signal to allow different address (from jump/branch instruction) to be fed into PC, while also flushing the IFID and IDEX pipeline so the next 2 instructions after the jump/branch are not executed. This is achieved through the flush control module that detects if PC MUX select is not equal to 0 (default PC + 4 sequential execution), which then sets the IFID and IDEX flush signals to high. For linking instructions such as `JAL`, `JALR`, `BGEZAL` and `BLTZAL` the CPU stores the `MEMWB_PC_plus4` into `$ra` (register 31) which is required for function calls so the program knows which address to return to in the caller. 
 There are 3 different types of jump/branch data-lines into the PC MUX apart from PC+4: 
   1. **Target Address:** This is formed from the 26-bit field that comes from instructions such as `J` and `JAL`. 4 upper bits of PC + 4 are added and 2 zeros are added to the end to form 32-bit target address. 
   2. **JR Address:** This address comes from the `ALU_result` for instructions `JR` and `JALR`. It is required for this address to be fed through ALU as the value comes from `readreg2`, thus ALU outputs B operand.  
   3. **Branch Address:** The branch address is formed by a 32 bit adder in Execute stage that adds the immediate shifted left by 2 with the `IDEX_PC_plus4`. This is because branch instructions embed the instruction offset value in the immediate field (x 4 to get byte offset), which needs to be added to the PC + 4 of that address to get the absolute address. 
 
-#### Simulation Waveform:
+#### Test instructions and Simulation Waveforms:
 J: 
 ```
-20080005    // addi $t0, $zero, 5
+20080005    // addi $8,  $0, 5
 08000004    // j 16
-20090063    // addi $t1, $zero, 99   // should be flushed
-200A0063    // addi $t2, $zero, 99   // should be flushed
-200B000A    // addi $t3, $zero, 10
+20090063    // addi $9,  $0, 99   // should be flushed
+200A0063    // addi $10, $0, 99   // should be flushed
+200B000A    // addi $11, $0, 10
 ```
 <img width="1616" height="310" alt="image" src="https://github.com/user-attachments/assets/bc8af78f-fc3f-4f43-9f91-ec09595e11e6" />
 
 JR:
 ```
-20080005    // addi $t0, $zero, 5
+20080005    // addi $8,  $0, 5
 08000004    // j 16
-20090063    // addi $t1, $zero, 99   // should be flushed
-200A0063    // addi $t2, $zero, 99   // should be flushed
-200B000A    // addi $t3, $zero, 10
+20090063    // addi $9,  $0, 99   // should be flushed
+200A0063    // addi $10, $0, 99   // should be flushed
+200B000A    // addi $11, $0, 10
 ```
 <img width="1617" height="333" alt="image" src="https://github.com/user-attachments/assets/830f5512-06d7-4d24-946c-e407a29efdc4" />
 
 BEQ:
 ```
-20080005    // PC = 0     addi $t0, $zero, 5
-20090005    // PC = 4     addi $t1, $zero, 5
-11090002    // PC = 8     beq  $t0, $t1, 2
-200A0063    // PC = 12    addi $t2, $zero, 99   // should be flushed
-200B0063    // PC = 16    addi $t3, $zero, 99   // should be flushed
-200C000A    // PC = 20    addi $t4, $zero, 10  // branch target
+20080005    // PC = 0     addi $8,  $0, 5
+20090005    // PC = 4     addi $9,  $0, 5
+11090002    // PC = 8     beq  $8,  $9, 2
+200A0063    // PC = 12    addi $10, $0, 99   // should be flushed
+200B0063    // PC = 16    addi $11, $0, 99   // should be flushed
+200C000A    // PC = 20    addi $12, $0, 10   // branch target
 ```
 <img width="1616" height="308" alt="image" src="https://github.com/user-attachments/assets/a6246d77-09d7-4856-8ebd-15574fadde39" />
 
@@ -123,7 +130,7 @@ This submodule is a FSM performs unsigned division using the dividend and diviso
 <br>**FSM states:** There are 3 states: `IDLE`, `BUSY` and `DONE`. When `start` goes high the current state transitions from `IDLE` to `BUSY` to start the division process. Once division is complete the state transitions from `BUSY` to `DONE` for 1 clk cycle and then back to `IDLE`. 
 <br>**Restoring clocked Division:** Each clock cycle, the divider shifts `A` left and brings in the next bit of the dividend from `Q[31]`. It then compares `A_shifted` with the divisor `M`: if `A_shifted` >= `M`, it subtracts `M` and puts a 1 into LSB of `Q`, otherwise it puts 0. After 32 cycles, `Q` becomes quotient and `A` becomes remainder. 
 
-#### Simulation Waveform:
+#### Test instructions:
 ```
 2008FFF6    // addi $8, $zero, -10      → $8 = -10
 20090003    // addi $9, $zero, 3        → $9 = 3
@@ -137,6 +144,7 @@ This submodule is a FSM performs unsigned division using the dividend and diviso
 00005012    // mflo $10                 → $10 = LO
 00005810    // mfhi $11                 → $11 = HI
 ```
+#### Simulation Waveform:
 <img width="1891" height="339" alt="Screenshot 2026-09-06 010939" src="https://github.com/user-attachments/assets/73130cf9-764c-455b-ab1b-aa1dea794917" />
 
 
@@ -145,20 +153,20 @@ This submodule is a FSM performs unsigned division using the dividend and diviso
 ### Basic array processing program 
 
 The program starts in `main` and initializes $sp to 1024 (supporting MIPS full descending stack layout) and then stores the signed integer array [12, -5, 25, 7, -10, 30, 4, 18] in data memory. It then calls `process`, which uses separate functions to find the maximum (30), minimum (-10), sum (81) of the array and average (10), and then stores them in memory. Last it calls `transform_array` which calls `transform_value` to replace each element in array with ((x × 3) + 7) / 2, producing [21, -4, 41, 14, -11, 48, 9, 30]. 
-The final values in data memory should be: 
-Address: value
-0: 21
-4: -4
-8: 41 
-12: 14
-16: -11
-20: 48
-24: 9
-28: 30
-64: 30
-68: -10
-72: 81
-76: 10
+<br>The final values in data memory should be: 
+<br>Address: value
+<br>0: 21
+<br>4: -4
+<br>8: 41 
+<br>12: 14
+<br>16: -11
+<br>20: 48
+<br>24: 9
+<br>28: 30
+<br>64: 30
+<br>68: -10
+<br>72: 81
+<br>76: 10
 
 <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/7ececf9a-03af-4d57-9e15-91c059b3b81c" />
 
@@ -401,11 +409,13 @@ The final values in data memory are shown in the waveform below:
 
 ## Vivado Netlist Schematic 
 
-The synthesized Vivado netlist shows the hardware implementation of the processor, including the datapath, pipeline registers, control logic, memories, and supporting modules.
+The screenshot below shows the schematic of the synthesized netlist which is the hardware implementation of the CPU. 
 
 <img width="1698" height="448" alt="image" src="https://github.com/user-attachments/assets/25c1012d-4fda-43f1-9276-631298fea6db" />
 
 
+## Use of AI 
+All Verilog code and architecture for the CPU was planned and designed/written myself first and then later debugged with the help of AI to spot a a few bugs that were a needle in a haystack within the CPU. AI was used heavily as a learning tool to understand the MIPS ISA, concepts in CPU architecture and Verilog. All the MIPS assembly test code/programs were written by entirely by AI as it allows get specific tests quickly and as the purpose of this project is only to implement a CPU capable of processing MIPS. Using AI to make the MIPS assembly test code also ensures there are no errors that could be mistaken for CPU issues, preventing unnecessary time spent debugging the CPU.
 
 
 
