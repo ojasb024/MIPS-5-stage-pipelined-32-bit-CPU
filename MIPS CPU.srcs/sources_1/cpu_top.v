@@ -202,7 +202,7 @@ module cpu_top(
         forward_A, forward_B, forward_C, A_src, B_src, C_src);
     
     // Hazard detection unit
-    hazard_detection_unit g11(rs, rt, IDEX_mem_read, IDEX_rt, hazard_stall, 
+    hazard_detection_unit g11(rs, rt, IDEX_dst_reg, IDEX_mem_read, IDEX_MDU_cont, hazard_stall, 
         hazard_IDEX_flush);
 
     // Flushing control
