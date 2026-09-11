@@ -4,7 +4,7 @@
 This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog using Xilinx Vivado. The CPU follows the classic IF (Instruction Fetch), ID (Instruction Decode), EX (Execute), MEM (Memory Access), and WB (Write Back) pipeline architecture, with separate instruction and data memories based on a Harvard architecture. The CPU supports entire MIPS user-level ISA and implements data forwarding, load-use hazard detection, and pipeline stalling/flushing for jumps/branches. 
 
 ## CPU datapath
-<img width="5325" height="3954" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/91f19c89-f212-40e9-a31c-f3a4c1941977" />
+<img width="5367" height="3989" alt="Untitled-2026-06-06-1234 excalidraw" src="https://github.com/user-attachments/assets/a8d232d2-5d62-4f63-b23d-496fbd91f2f9" />
 
 ## CPU Architecture and Operation
 
@@ -56,20 +56,27 @@ The forwarding unit has to forward the value of $8 from instruction 1s destinati
 <img width="1612" height="172" alt="image" src="https://github.com/user-attachments/assets/d851a828-8502-4789-8b6c-627452007b66" />
 
 ### Hazard detection unit
-The hazard detection unit handles load-use hazards when a loaded value is used by the next instruction. The forwarding unit can forward `EXMEM_ALU_result` from MEM for next-instruction dependencies or `write_back_data` from WB for dependencies two instructions later. `write_back_data` is selected by the WB MUX that has inputs of all types of writeback data including load value data. Therefore a load must be at least two instructions ahead for forwarding, if less, then the hazard unit inserts a one-cycle NOP in between to allow correct forwarding. The Hazard unit achieves this by detecting a match between `IDEX_rt` (Execute) and `rs` or `rt` (Decode) while `IDEX_mem_read` is high. If match is detected it sets `PC_en` and `IFID_en` to low and sets `hazard_IDEX_flush` to high which pauses the Fetch and Decode stage for 1 clock cycle while ID/EX, EX/MEM and MEM/WB continue. Since PC and IFID are paused, the `hazard_IDEX_flush` signal is needed IDEX outputs a NOP instead of the same instruction in Decode stage. 
+This unit is responsible for detecting forwarding hazards with a few instructions that the forwarding unit cannot fix alone. This is because, the forwarding unit forwards `EXMEM_ALU_result` for next instruction forwarding and `write_back_data` for next-to-next instruction forwarding. The problem with this design is that the `ALU_result` is the destination register value for most instructions except `lw`/`lh`/`lhu`/`lb`/`lbu` that uses `load_data` and `mfhi`/`mflo` that uses `MDU_result`. Therefore the correct value to forward for any instruction is always `write_back_data` as it is outputted from the write back MUX that has datalines of all final destination register values. 
+
+The hazard detection unit solves this issue by detecting if the instruction is a load or `mfhi`/`mflo` that requires forwarding its result into the very next instruction, and then setting `hazard_stall` and `hazard_IDEX_flush` to high for stalling control unit to pause Fetch and Decode stage, while flushing control unit inserts a NOP (No Operation Instruction) into Execute. This NOP is inserted between the two instructions so the `write_back_data` (could be `MDU_result` or `load_data` which is correct value) has to be forwarded instead of `EXMEM_ALU_result` while there is a NOP in Memory Access. 
 
 ### Test Instructions: 
 ```
-20080000    // addi  $8,  $0, 0
-2009000A    // addi  $9,  $0, 10
-AD090190    // sw    $9,  400($8)
-8D0A0190    // lw    $10, 400($8)
-214B0005    // addi  $11, $10, 5
+20080064  // addi $8, $0, 100
+20090005  // addi $9, $0, 5
+
+01090018  // mult $8, $9
+00005012  // mflo $10
+214B000A  // addi $11, $10, 10
+
+AD090000  // sw $9, 0($8)
+8D0A0000  // lw $10, 0($8)
+214B000A  // addi $11, $10, 10
 ```
 
 #### Simulation Waveform:
-<img width="1614" height="315" alt="image" src="https://github.com/user-attachments/assets/de606b32-3035-42f8-b1e9-a72d15c80498" />
-From the simulation, the signals `IFID_en` and `PC_en` switch to 0 pausing PC and IFID while continuing IDEX, EXMEM and MEMWB pipeline registers. Hazard unit flush signal into IDEX goes high at this same time which inserts a NOP into the execute stage which is between the instructions (lw and last addi). 1 clock cycle later, the `A_src` signal goes high and value of $t2 (10) is forwarded, indicating that the `lw` instruction is in Writeback and `addi` is in Execute. 
+<img width="1890" height="331" alt="image" src="https://github.com/user-attachments/assets/d74fe52a-3423-4484-9e75-69386a4d31fd" />
+From the simulation, the `PC_en` and `IFID_en` go low at PC = 20 and PC = 32 which is why the PC stays at these values for 2 clock cycles instead of 1. Also `IDEX_flush` goes high which inserts the NOP into IDEX (EX stage). 
 
 ### Jumping/Branching
 Jump/branch instructions allow a program to change the order in which instructions are executed. They are essential for controlling the flow of a program and are used to implement things like function calls, loops, and if statements. The CPU achieves this by changing the PC MUX select signal to allow different address (from jump/branch instruction) to be fed into PC, while also flushing the IFID and IDEX pipeline so the next 2 instructions after the jump/branch are not executed. This is achieved through the flush control module that detects if PC MUX select is not equal to 0 (default PC + 4 sequential execution), which then sets the IFID and IDEX flush signals to high. For linking instructions such as `JAL`, `JALR`, `BGEZAL` and `BLTZAL` the CPU stores the `MEMWB_PC_plus4` into `$ra` (register 31) which is required for function calls so the program knows which address to return to in the caller. 
@@ -408,7 +415,7 @@ The screenshot below shows the schematic of the synthesized netlist which is the
 
 
 ## Use of AI 
-All Verilog code and architecture for the CPU was planned and designed myself first and then later optimized/debugged with the help of AI to spot bugs that were a needle in a haystack within the CPU. AI was used heavily as a learning tool to understand the MIPS ISA, concepts in computer/digital design and Verilog. All the MIPS assembly test code/programs were written by entirely by AI as it allows to create code for specific tests quickly and as the purpose of this project is to implement a CPU capable of processing MIPS. Using AI for the test assembly code also ensures that there are no mistakes within the MIPS assembly code. 
+All Verilog code and architecture for the CPU was planned and designed/written myself first and then later debugged with the help of AI to spot a a few bugs that were a needle in a haystack within the CPU. AI was used heavily as a learning tool to understand the MIPS ISA, concepts in CPU architecture and Verilog. All the MIPS assembly test code/programs were written by entirely by AI as it allows get specific tests quickly and as the purpose of this project is only to implement a CPU capable of processing MIPS. Using AI to make the MIPS assembly test code also ensures there are no errors that could be mistaken for CPU issues, preventing unnecessary time spent debugging the CPU.
 
 
 
