@@ -194,7 +194,7 @@ These are some common MIPS branch/jump instruction tested below:
 
 00000000    // nop
 ```
-
+<img width="1889" height="424" alt="image" src="https://github.com/user-attachments/assets/9b5c29b0-6b2f-410b-affc-8bdf90c42afc" />
 When PC select `PC_src` changes from 0 (default PC+4), the IFID and IDEX flush signals go high which replaces the next 2 instructions after the branch/jump to NOPs so they are not executed. 
 
 ### MDU
