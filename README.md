@@ -80,7 +80,7 @@ This project implements a 32-bit 5-stage pipelined MIPS CPU, designed in Verilog
 ### Pipelining 
 The CPU uses a 5-stage pipeline architecture with four pipeline registers (IF/ID, ID/EX, EX/MEM and MEM/WB) between each stage that transfer all data from one stage to the next on each positive clock edge. Pipelining improves efficiency of the CPU as allows up to 5 instructions to be processed per clock cycle, with each instruction occupying a different stage. This results in a much higher number of instructions completed in the same time that a single-cycle CPU would. 
 
-<img width="858" height="332" alt="Screenshot 2026-08-23 025453" src="https://github.com/user-attachments/assets/35352232-016f-4314-ad88-e486ef1cf0dd" />
+<img width="908" height="338" alt="image" src="https://github.com/user-attachments/assets/e9b03993-f9b8-4f17-8855-9a032867b135" />
 
 #### Simulation: 
 The signal `PC_plus4` is used to demonstrate the pipeline propagation, as it is the only signal that travels through each stage.  
@@ -152,6 +152,9 @@ Jump/branch instructions allow the program to continue instruction execution fro
 There are 3 different types of jump/branch data-lines into the PC MUX apart from PC+4: 
 <br>`PC_src` = 1: **Target Address:** This is formed from the 26-bit field that comes from instructions such as `J` and `JAL`. 4 upper bits of PC + 4 are added and 2 zeros are added to the end to form 32-bit target address. <br>`PC_src` = 2: **JR Address:** This address comes from the `ALU_result` for instructions `JR` and `JALR`. It is required for this address to be fed through ALU as the value comes from `readreg2`, thus ALU outputs B operand. <br>`PC_src` = 3: **Branch Address:** The branch address is formed by a 32 bit adder in Execute stage that adds the immediate shifted left by 2 with the `IDEX_PC_plus4`. This is because branch instructions embed the instruction offset value in the immediate field (x 4 to get byte offset), which needs to be added to the PC + 4 of that address to get the absolute address. 
 
+<img width="907" height="395" alt="image" src="https://github.com/user-attachments/assets/dd165f62-d9c1-4ee2-a7c6-d418120c8947" />
+<br>In this diagram, instruction B is a jump/branch which changes `PC_src` from 0(default), causing flushing control to flush IFID and IDEX pipeline registers. This replaces Instruction C and D after jump/branch instruction B with NOPs and instruction E is the instruction at the address given by instruction B.  
+
 #### Test instructions and Simulation Waveforms:
 These are some common MIPS branch/jump instruction tested below: 
 
@@ -191,7 +194,7 @@ These are some common MIPS branch/jump instruction tested below:
 
 00000000    // nop
 ```
-<img width="1887" height="425" alt="image" src="https://github.com/user-attachments/assets/c0d8113d-36a9-4167-b871-5dfb7e9fd37e" />
+
 When PC select `PC_src` changes from 0 (default PC+4), the IFID and IDEX flush signals go high which replaces the next 2 instructions after the branch/jump to NOPs so they are not executed. 
 
 ### MDU
